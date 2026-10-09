@@ -307,6 +307,7 @@ async function chooseYear(y) {
 
 // --- Opening a class: its first pupil, with the class roster alongside ---
 async function openClass(id) {
+  if (current?.class_id === id) return;  // already in this class: nothing to do
   if (!(await okToLeaveDraft())) return;
   const klass = (await store.listTree()).find(c => c.id === id);
   if (!klass) { await showEmpty(); return; }
@@ -520,9 +521,12 @@ function openClassModal(klass = null) {
         removed,
       });
       modal.close();
-      // Reopen the class just saved, unless a note is being written.
-      if (!hasUnsavedDraft()) await openClass(saved.id);
+      // The pupil being viewed may have been removed or renamed with the class.
+      if (removed.includes(current?.id)) await showEmpty();
+      else if (!hasUnsavedDraft()) await openClass(saved.id);
       refreshSidebar();
+      // Still in the saved class: redraw the roster, as names and counts may have changed.
+      if (current?.class_id === saved.id && !$('#roster').hidden) showRoster(current, tree);
     } catch (err) {
       error.textContent = err.message;
     }
@@ -575,7 +579,6 @@ async function selectPupil(p) {
   showRoster(p, classes);
   $('h2', main).textContent = p.name;
   $('#pupil-class').textContent = p.className ?? 'Class';
-  $('#pupil-class').onclick = () => openClass(p.class_id);
   $('#pupil-year').textContent = store.selectedYear();
   const editable = store.isCurrentYear();
   $('#past-year').hidden = editable;
@@ -617,6 +620,7 @@ async function selectPupil(p) {
       confirmLabel: 'Delete pupil', danger: true,
     }))) return;
     await store.deletePupil(p.id);
+    current = null;
     await openClass(p.class_id);
     refreshSidebar();
   };
