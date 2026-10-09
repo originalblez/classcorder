@@ -39,8 +39,11 @@
 
 <template id="folder-view">
   <div class="card key-card">
-    <h2>Choose your Teacher Notes folder</h2>
-    <p>Pupils and notes are saved in a folder on this computer. Choose (or create) a folder called <strong>Teacher Notes</strong> inside your OneDrive so it is backed up and synced. The app creates <strong>Data</strong> and <strong>Exports</strong> folders inside it.</p>
+    <h2>Welcome to Classcorder</h2>
+    <p>Classcorder keeps everything — your classes, pupils and notes — in one folder on this computer. That folder is the only place your notes are stored: Classcorder has no servers and no online storage, and you can copy, move or back up the folder like any other.</p>
+    <p><strong>Choose a folder for your notes.</strong> You can create a new one anywhere, or pick a folder that syncs to the cloud — OneDrive, Dropbox or Google Drive all work, as long as the folder is on your computer. A synced folder means your notes are backed up automatically. You can change folders at any time, and nothing is uploaded by the app itself.</p>
+    <p>Classcorder creates a <strong>Data</strong> folder (one file per school year) and an <strong>Exports</strong> folder for saved copies of your notes, so you're never locked in.</p>
+    <p>When you record a spoken note, the audio is sent to Mistral for transcription using your own Mistral key — the next screen. The finished note is saved only to your folder.</p>
     <p id="folder-hint" hidden>Your browser needs permission to use the folder again.</p>
     <div class="row">
       <button class="btn primary" id="folder-button">Choose folder</button>
@@ -253,7 +256,7 @@
 <template id="key-view">
   <div class="card key-card">
     <h2>Connect to Mistral</h2>
-    <p>Enter your Mistral API key. Recordings and transcripts are sent to Mistral for transcription and tidying. Notes are saved only in your Teacher Notes folder.</p>
+    <p>Enter your Mistral API key. Recordings and transcripts are sent to Mistral for transcription and tidying. Notes are saved only in the folder you chose.</p>
     <form id="key-form">
       <input type="text" name="username" value="Mistral API key" autocomplete="username" hidden>
       <input type="password" name="password" id="key-input" placeholder="API key" autocomplete="current-password" required>
