@@ -74,6 +74,9 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 #roster button:hover { background: var(--chip); }
 #roster button.active { background: var(--pink); }
 #roster .count { flex: none; font-size: 12px; color: var(--muted); }
+#roster button.quiet::after { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; }
+#roster .roster-edit { display: block; width: 100%; margin-top: 12px; padding: 6px 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; color: var(--muted); text-align: left; cursor: pointer; }
+#roster .roster-edit:hover { background: var(--chip); color: var(--ink); }
 
 .tree { flex: 1; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
 .tree .branch { margin-left: 13px; padding-left: 6px; border-left: 1px solid var(--dark-line); }
@@ -118,7 +121,6 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 /* Sidebar sections */
 .node-button.klass { color: #d4d4da; }
 .node-button.klass:hover { background: var(--dark-2); }
-.node-button.klass.within { color: var(--on-dark); background: var(--dark-2); }
 .node-button.klass.active { background: var(--pink); color: var(--ink); font-weight: 500; }
 .node-button.active .count { color: var(--muted); }
 .btn.add-class { width: 100%; background: none; color: var(--on-dark); border: 1px dashed rgba(255, 255, 255, .2); padding: 10px 14px; }
@@ -164,21 +166,6 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 /* Class page */
 .page-head .btn { display: inline-flex; align-items: center; gap: 8px; }
 .page-head .btn .ico { width: 16px; height: 16px; }
-.class-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-.filter { display: flex; align-items: center; gap: 8px; background: var(--paper); border-radius: 999px; padding: 0 14px; color: var(--muted); width: min(280px, 100%); box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
-.filter:focus-within { outline: 2px solid var(--violet); outline-offset: -2px; }
-.filter .ico { width: 15px; height: 15px; }
-.filter input { flex: 1; min-width: 0; border: 0; background: none; padding: 9px 0; outline: none; }
-.quiet-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; vertical-align: 1px; }
-.pupil-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-.pupil-grid > .card, .pupil-grid > .empty { grid-column: 1 / -1; }
-.pupil-tile { position: relative; display: flex; align-items: center; gap: 12px; text-align: left; border: 0; background: var(--paper); border-radius: 18px; padding: 12px 14px; font: inherit; color: var(--ink); cursor: pointer; box-shadow: 0 1px 2px rgba(0, 0, 0, .04); transition: box-shadow .15s, transform .15s; }
-.pupil-tile:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, .08); transform: translateY(-1px); }
-.pupil-tile[hidden] { display: none; }
-.pupil-tile .tile-text { display: flex; flex-direction: column; min-width: 0; }
-.pupil-tile strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pupil-tile .meta { font-size: 12px; color: var(--muted); }
-.pupil-tile.quiet::after { content: ''; position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
 .banner { background: #fff7ed; color: var(--amber); border-radius: 14px; padding: 10px 16px; font-size: 13px; margin: 0 0 20px; }
 
 .composer { border-radius: 24px; overflow: hidden; margin-bottom: 28px; background: var(--paper); box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .05); }

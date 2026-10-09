@@ -7,8 +7,7 @@ import { loadKey, saveKey, forgetKey } from './key.js';
 
 let apiKey = null;
 let current = null;      // selected pupil
-let view = null;         // 'class', 'reports' or 'settings' while that screen is open
-let currentClass = null; // id of the class whose page is open
+let view = null;         // 'reports' or 'settings' while that screen is open
 let yearCollapsed = false;
 let recorder = null, busy = false;
 // The note being drafted: raw transcripts of each recording and their estimated cost.
@@ -22,7 +21,7 @@ const okToLeaveDraft = async () => !recording() && (!hasUnsavedDraft() || confir
   confirmLabel: 'Discard note', cancelLabel: 'Keep editing', danger: true,
 }));
 
-// Pupils with no note for this many days are marked on the class page.
+// Pupils with no note for this many days are marked on the class roster.
 const QUIET_DAYS = 14;
 
 // The class roster column, shown beside the main screen while a pupil is open.
@@ -37,15 +36,24 @@ function showRoster(p, classes) {
   if (!klass) { closeRoster(); return; }
   roster.replaceChildren();
   roster.append(el('h3', { textContent: klass.name }));
+  // Only the current year marks pupils without a recent note; for past years it means nothing.
+  const since = Date.now() - QUIET_DAYS * 864e5;
   const ul = el('ul');
   for (const q of klass.pupils) {
-    const b = el('button', { className: q.id === p.id ? 'active' : '' },
+    const quiet = store.isCurrentYear() && (!q.last || new Date(q.last) < since);
+    const b = el('button', { className: (q.id === p.id ? 'active' : '') + (quiet ? ' quiet' : '') },
       el('span', { className: 'label', textContent: q.name }),
       el('span', { className: 'count', textContent: q.notes || '' }));
+    b.title = quiet ? `No note in the last ${QUIET_DAYS} days` : '';
     b.onclick = () => selectPupil({ ...q, className: klass.name });
     ul.append(el('li', {}, b));
   }
   roster.append(ul);
+  if (store.isCurrentYear()) {
+    const edit = el('button', { className: 'roster-edit', textContent: 'Edit class' });
+    edit.onclick = () => openClassModal(klass);
+    roster.append(edit);
+  }
   roster.hidden = false;
   $('.layout').classList.add('with-roster');
 }
@@ -145,7 +153,6 @@ function emptyCard(title, text, label, onclick) {
 async function showEmpty() {
   current = null;
   view = null;
-  currentClass = null;
   closeRoster();
   saveRoute();
   const main = $('#main');
@@ -174,10 +181,6 @@ function saveRoute() {
     for (const [k, v] of reports.routeParams()) params.set(k, v);
   }
   if (view === 'settings') params.set('view', 'settings');
-  if (view === 'class') {
-    params.set('view', 'class');
-    params.set('class', currentClass);
-  }
   $('#nav-reports').classList.toggle('active', view === 'reports');
   $('#nav-settings').classList.toggle('active', view === 'settings');
   history.replaceState(null, '', params.size ? `#${params}` : location.pathname);
@@ -198,7 +201,7 @@ async function restoreRoute() {
     return true;
   }
   if (params.get('view') === 'class' && (await store.listTree()).some(c => c.id === params.get('class'))) {
-    await showClass(params.get('class'));
+    await openClass(params.get('class'));
     return true;
   }
   const id = params.get('pupil');
@@ -281,13 +284,10 @@ function classList() {
   return ul;
 }
 
-// Highlights the open pupil or class; a pupil's class gets a lighter mark.
+// Highlights the open pupil, and its class, in the sidebar.
 function markActive() {
   for (const b of document.querySelectorAll('#tree [data-pupil]')) b.classList.toggle('active', b.dataset.pupil === current?.id);
-  for (const b of document.querySelectorAll('#tree [data-class]')) {
-    b.classList.toggle('active', view === 'class' && b.dataset.class === currentClass);
-    b.classList.toggle('within', b.dataset.class === current?.class_id);
-  }
+  for (const b of document.querySelectorAll('#tree [data-class]')) b.classList.toggle('active', b.dataset.class === current?.class_id);
 }
 
 async function chooseYear(y) {
@@ -305,62 +305,18 @@ async function chooseYear(y) {
   refreshSidebar();
 }
 
-// --- Class page: a grid of the class's pupils ---
+// --- Opening a class: its first pupil, with the class roster alongside ---
 async function openClass(id) {
-  if ((view === 'class' && currentClass === id) || !(await okToLeaveDraft())) return;
-  await showClass(id);
-}
-
-const shortDate = iso => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
-async function showClass(id) {
+  if (!(await okToLeaveDraft())) return;
   const klass = (await store.listTree()).find(c => c.id === id);
   if (!klass) { await showEmpty(); return; }
-  current = null;
-  view = 'class';
-  currentClass = id;
-  closeRoster();
-  saveRoute();
-  markActive();
-  const main = $('#main');
-  main.replaceChildren($('#class-view').content.cloneNode(true));
-  const editable = store.isCurrentYear();
-  $('h2', main).textContent = klass.name;
-  $('#c-context').textContent = `${store.selectedYear()} · ${plural(klass.pupils.length, 'pupil')}`;
-  $('#c-edit').hidden = !editable;
-  $('#c-edit').onclick = () => openClassModal(klass);
-  $('#c-report').onclick = () => { reports.useClass(id); showReports(); };
-  $('#c-tools').hidden = !klass.pupils.length;
-  const grid = $('#c-pupils');
   if (!klass.pupils.length) {
-    grid.replaceChildren(emptyCard('No pupils yet', editable
-      ? 'Add the pupils in this class. You can paste a list of names.' : 'This class had no pupils.',
-    editable && 'Add pupils', () => openClassModal(klass)));
+    // There is nothing to show: go straight to adding the pupils.
+    store.isCurrentYear() ? openClassModal(klass)
+      : notice('No pupils', `${klass.name} has no pupils recorded for ${store.selectedYear()}.`);
     return;
   }
-  // Only the current year marks pupils without a recent note; for past years it means nothing.
-  const since = Date.now() - QUIET_DAYS * 864e5;
-  const isQuiet = p => editable && (!p.last || new Date(p.last) < since);
-  const tiles = klass.pupils.map(p => {
-    const b = el('button', { className: `pupil-tile${isQuiet(p) ? ' quiet' : ''}` },
-      el('span', { className: 'tile' }, el('span', { className: 'ico i-person' })),
-      el('span', { className: 'tile-text' },
-        el('strong', { textContent: p.name }),
-        el('span', { className: 'meta', textContent: p.notes ? `${plural(p.notes, 'note')} · last ${shortDate(p.last)}` : 'No notes yet' })));
-    b.onclick = () => selectPupil({ ...p, className: klass.name });
-    return { b, name: p.name.toLowerCase() };
-  });
-  const none = el('p', { className: 'empty', textContent: 'No pupils match.', hidden: true });
-  grid.replaceChildren(...tiles.map(t => t.b), none);
-  const quiet = klass.pupils.filter(isQuiet).length;
-  $('#c-summary').replaceChildren(...(quiet
-    ? [el('span', { className: 'quiet-dot' }), ` ${plural(quiet, 'pupil')} without a note in the last ${QUIET_DAYS} days`]
-    : editable ? ['Everyone has a note from the last two weeks.'] : []));
-  $('#c-filter').oninput = e => {
-    const q = e.target.value.trim().toLowerCase();
-    for (const t of tiles) t.b.hidden = !t.name.includes(q);
-    none.hidden = tiles.some(t => !t.b.hidden);
-  };
+  selectPupil({ ...klass.pupils[0], className: klass.name });
 }
 
 // --- Find pupil (sidebar search; press / to focus it) ---
@@ -546,7 +502,7 @@ function openClassModal(klass = null) {
     try {
       await store.deleteClass(klass.id);
       modal.close();
-      if (currentClass === klass.id || rows.some(r => r.id === current?.id)) await showEmpty();
+      if (rows.some(r => r.id === current?.id)) await showEmpty();
       refreshSidebar();
     } catch (err) { error.textContent = err.message; }
   };
@@ -564,8 +520,8 @@ function openClassModal(klass = null) {
         removed,
       });
       modal.close();
-      // Show the class just saved, unless a note is being written.
-      if (!hasUnsavedDraft()) await showClass(saved.id);
+      // Reopen the class just saved, unless a note is being written.
+      if (!hasUnsavedDraft()) await openClass(saved.id);
       refreshSidebar();
     } catch (err) {
       error.textContent = err.message;
@@ -661,7 +617,7 @@ async function selectPupil(p) {
       confirmLabel: 'Delete pupil', danger: true,
     }))) return;
     await store.deletePupil(p.id);
-    await showClass(p.class_id);
+    await openClass(p.class_id);
     refreshSidebar();
   };
   renderNotes(notes);

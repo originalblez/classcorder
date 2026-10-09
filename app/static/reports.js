@@ -72,12 +72,6 @@ function step(direction) {
   else if (settings.period === 'month') date = new Date(date.getFullYear(), date.getMonth() + direction, 1);
 }
 
-// Opens the next report on this class, as if it had been chosen in the Class menu.
-export function useClass(classId) {
-  settings = { ...settings, classId };
-  local.set(SETTINGS_KEY, settings);
-}
-
 // --- URL ---
 export function routeParams() {
   const params = [['date', isoDate(date)]];
