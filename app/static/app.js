@@ -22,23 +22,38 @@ const okToLeaveDraft = async () => !recording() && (!hasUnsavedDraft() || confir
   confirmLabel: 'Discard note', cancelLabel: 'Keep editing', danger: true,
 }));
 
-// The pupils opened most recently, per year, newest first (IDs only; a convenience only).
-// A pupil already in the list keeps its place, so the list doesn't jump about while it's used.
-const RECENT_MAX = 3;
-const recent = {
-  get: y => { try { return JSON.parse(localStorage.getItem(`recent:${y}`)) ?? []; } catch { return []; } },
-  add(y, id) {
-    const ids = recent.get(y);
-    if (ids.includes(id)) return;
-    try { localStorage.setItem(`recent:${y}`, JSON.stringify([id, ...ids].slice(0, RECENT_MAX))); } catch {}
-  },
-};
 // Pupils with no note for this many days are marked on the class page.
 const QUIET_DAYS = 14;
+
+// The class roster column, shown beside the main screen while a pupil is open.
+function closeRoster() {
+  $('#roster').hidden = true;
+  $('.layout').classList.remove('with-roster');
+}
+
+function showRoster(p, classes) {
+  const roster = $('#roster');
+  const klass = classes.find(c => c.id === p.class_id);
+  if (!klass) { closeRoster(); return; }
+  roster.replaceChildren();
+  roster.append(el('h3', { textContent: klass.name }));
+  const ul = el('ul');
+  for (const q of klass.pupils) {
+    const b = el('button', { className: q.id === p.id ? 'active' : '' },
+      el('span', { className: 'label', textContent: q.name }),
+      el('span', { className: 'count', textContent: q.notes || '' }));
+    b.onclick = () => selectPupil({ ...q, className: klass.name });
+    ul.append(el('li', {}, b));
+  }
+  roster.append(ul);
+  roster.hidden = false;
+  $('.layout').classList.add('with-roster');
+}
 
 // --- Folder ---
 function showFolderForm(needsPermission) {
   current = null;
+  closeRoster();
   $('#main').replaceChildren($('#folder-view').content.cloneNode(true));
   $('#folder-hint').hidden = !needsPermission;
   $('#folder-button').textContent = needsPermission ? 'Allow access' : 'Choose folder';
@@ -78,6 +93,7 @@ async function changeFolder() {
 function showKeyForm() {
   current = null;
   view = null;
+  closeRoster();
   saveRoute();
   refreshSidebar();
   $('#main').replaceChildren($('#key-view').content.cloneNode(true));
@@ -130,6 +146,7 @@ async function showEmpty() {
   current = null;
   view = null;
   currentClass = null;
+  closeRoster();
   saveRoute();
   const main = $('#main');
   const year = store.selectedYear();
@@ -208,7 +225,7 @@ async function showHome() {
   refreshSidebar();
 }
 
-// --- Sidebar: recent pupils, then school year → class ---
+// --- Sidebar: school year → class ---
 let tree = [];  // the selected year's classes with their pupils, for the sidebar and Find pupil
 
 async function refreshSidebar() {
@@ -223,7 +240,6 @@ async function refreshSidebar() {
     const years = await store.listYears();
     const selected = store.selectedYear();
     tree = selected ? await store.listTree() : [];
-    const parts = [el('div', { id: 'recent-box' })];
     const ul = el('ul');
     if (!years.includes(thisYear)) {
       const start = el('button', { className: 'node-button add', textContent: `+ Start ${thisYear}` });
@@ -241,9 +257,7 @@ async function refreshSidebar() {
       if (open) li.append(classList());
       ul.append(li);
     }
-    parts.push(ul);
-    nav.replaceChildren(...parts);
-    renderRecent();
+    nav.replaceChildren(ul);
     $('#nav-reports').hidden = !selected;
     $('#find-box').hidden = !tree.some(c => c.pupils.length);
     // Classes can only be added to the current year.
@@ -252,30 +266,6 @@ async function refreshSidebar() {
   } catch (err) {
     notice('Could not read the data file', err.message);
   }
-}
-
-// Redraws only the Recent section, from the cached tree, then the highlights.
-function renderRecent() {
-  const box = $('#recent-box');
-  if (!box) return;
-  const byId = new Map(tree.flatMap(c => c.pupils.map(p => [p.id, { ...p, className: c.name }])));
-  const pupils = store.selectedYear() ? recent.get(store.selectedYear()).map(id => byId.get(id)).filter(Boolean) : [];
-  box.replaceChildren(...(pupils.length ? [el('h3', { className: 'tree-heading', textContent: 'Recent' }),
-    el('ul', { className: 'recent' }, ...pupils.map(p => el('li', {}, pupilButton(p))))] : []));
-  markActive();
-}
-
-function remember(pupilId) {
-  recent.add(store.selectedYear(), pupilId);
-  renderRecent();
-}
-
-function pupilButton(p) {
-  const b = el('button', { className: 'node-button leaf' },
-    el('span', { className: 'label', textContent: p.name }), el('span', { className: 'count', textContent: p.className }));
-  b.dataset.pupil = p.id;
-  b.onclick = () => selectPupil(p);
-  return b;
 }
 
 function classList() {
@@ -329,6 +319,7 @@ async function showClass(id) {
   current = null;
   view = 'class';
   currentClass = id;
+  closeRoster();
   saveRoute();
   markActive();
   const main = $('#main');
@@ -439,6 +430,7 @@ function showReports() {
   if (!store.selectedYear()) return;
   current = null;
   view = 'reports';
+  closeRoster();
   markActive();
   reports.show($('#main'), saveRoute);
   saveRoute();
@@ -453,6 +445,7 @@ $('#nav-reports').onclick = async () => {
 function showSettings() {
   current = null;
   view = 'settings';
+  closeRoster();
   markActive();
   $('#main').replaceChildren($('#settings-view').content.cloneNode(true));
   const year = store.selectedYear();
@@ -609,8 +602,7 @@ function showOriginal() {
 
 let selecting = 0;  // the latest selectPupil call; earlier ones that finish later are dropped
 
-// stepping: reached with the previous/next buttons, so not added to Recent.
-async function selectPupil(p, { stepping = false } = {}) {
+async function selectPupil(p) {
   if (!apiKey || current?.id === p.id || !(await okToLeaveDraft())) return;
   // Everything the page needs is read before it's drawn, so it appears complete in one go.
   const call = ++selecting;
@@ -624,12 +616,11 @@ async function selectPupil(p, { stepping = false } = {}) {
   markActive();
   const main = $('#main');
   main.replaceChildren($('#pupil-view').content.cloneNode(true));
+  showRoster(p, classes);
   $('h2', main).textContent = p.name;
   $('#pupil-class').textContent = p.className ?? 'Class';
   $('#pupil-class').onclick = () => openClass(p.class_id);
   $('#pupil-year').textContent = store.selectedYear();
-  if (!stepping) remember(p.id);
-  else markActive();
   const editable = store.isCurrentYear();
   $('#past-year').hidden = editable;
   $('#recorder').hidden = !editable;
@@ -642,7 +633,7 @@ async function selectPupil(p, { stepping = false } = {}) {
     const pupils = klass?.pupils ?? [];
     const i = pupils.findIndex(x => x.id === p.id);
     const target = pupils[i + dir];
-    if (target) selectPupil({ ...target, className: klass.name }, { stepping: true });
+    if (target) selectPupil({ ...target, className: klass.name });
   };
   $('#prev-pupil').onclick = () => gotoPupil(-1);
   $('#next-pupil').onclick = () => gotoPupil(1);
@@ -937,7 +928,6 @@ async function saveNote() {
   }
   resetDraft();
   setStatus('Saved.');
-  remember(current.id);
   renderNotes();
   refreshSpend();
 }

@@ -54,6 +54,7 @@ input, textarea, select { font: inherit; color: inherit; }
 
 /* Layout */
 .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+.layout.with-roster { grid-template-columns: 280px 196px 1fr; }
 main { display: flex; flex-direction: column; padding: 40px 40px 24px; max-width: 880px; width: 100%; min-height: 100vh; margin: 0 auto; }
 
 /* Sidebar: dark control surface */
@@ -64,6 +65,16 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 .wordmark { white-space: nowrap; }
 .rec-o { display: inline-block; width: .6em; height: .5em; vertical-align: baseline; background: radial-gradient(circle closest-side, var(--red) 92%, transparent 100%); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Roster: the class's pupils beside the main screen while a pupil is open */
+#roster { position: sticky; top: 0; height: 100vh; background: var(--paper); border-right: 1px solid var(--line); padding: 24px 10px 16px; overflow-y: auto; }
+#roster h3 { margin: 0 0 8px; padding: 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .01em; color: var(--ink-soft); }
+#roster li { margin: 1px 0; }
+#roster button { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+#roster button .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#roster button:hover { background: var(--chip); }
+#roster button.active { background: var(--pink); }
+#roster .count { flex: none; font-size: 12px; color: var(--muted); }
+
 .tree { flex: 1; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
 .tree .branch { margin-left: 13px; padding-left: 6px; border-left: 1px solid var(--dark-line); }
 .tree li { margin: 2px 0; }
@@ -105,10 +116,6 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 .find-results li.highlighted { background: var(--dark-3); }
 .find-results li.none { color: var(--on-dark-muted); cursor: default; }
 /* Sidebar sections */
-.tree-heading { margin: 0 0 4px; padding: 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--on-dark-muted); }
-.tree .recent { margin-bottom: 12px; }
-.tree .recent li { margin: 0; }
-.tree .recent .node-button { padding: 5px 10px; font-size: 14px; }
 .node-button.klass { color: #d4d4da; }
 .node-button.klass:hover { background: var(--dark-2); }
 .node-button.klass.within { color: var(--on-dark); background: var(--dark-2); }
@@ -313,7 +320,7 @@ dialog.modal::backdrop { background: rgba(15, 15, 20, .35); backdrop-filter: blu
   @page { margin: 14mm; }
   @page wide { size: A4 landscape; }
   body { background: #fff; }
-  aside, .page-head, .report-controls, dialog { display: none !important; }
+  aside, #roster, .page-head, .report-controls, dialog { display: none !important; }
   .layout { display: block; }
   main { padding: 0; max-width: none; min-height: 0; }
   .report-paper { padding: 0; box-shadow: none; border-radius: 0; margin: 0; }
@@ -329,7 +336,8 @@ dialog.modal::backdrop { background: rgba(15, 15, 20, .35); backdrop-filter: blu
 }
 
 @media (max-width: 760px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout, .layout.with-roster { grid-template-columns: 1fr; }
   aside { position: static; height: auto; }
+  #roster { display: none; }
   main { padding: 20px 16px; }
 }
