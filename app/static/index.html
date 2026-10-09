@@ -39,14 +39,12 @@
 
 <template id="folder-view">
   <div class="intro">
-    <img class="intro-logo" src="./images/logo.png" alt="">
-    <h1>Classcorder</h1>
-    <p class="intro-tagline">Quick spoken notes about your pupils, structured around your classes — and kept where you're in charge of them.</p>
+    <p class="intro-tagline">Quick spoken notes about your pupils, kept in a folder on your computer.</p>
     <div class="intro-features">
       <div class="intro-feature">
         <span class="ico i-mic"></span>
         <h3>Speak, don't type</h3>
-        <p>Press record and talk. Classcorder transcribes and tidies each note — you check it before it's saved.</p>
+        <p>Press record and talk. Classcorder turns it into a written note you can check and edit before saving.</p>
       </div>
       <div class="intro-feature">
         <span class="ico i-person"></span>
@@ -56,24 +54,21 @@
       <div class="intro-feature">
         <span class="ico i-shield"></span>
         <h3>No data security worries</h3>
-        <p>Your notes are saved in a folder on your own computer — not on our servers, because there aren't any. Copy it, sync it, back it up.</p>
+        <p>Notes are saved in a folder on your own computer. There are no servers and nothing is stored online. Copy it, sync it, back it up.</p>
       </div>
       <div class="intro-feature">
         <span class="ico i-table"></span>
         <h3>Reports your way</h3>
-        <p>Print or export any class's notes for any period. Custom reporting templates are coming soon.</p>
+        <p>Print or export notes for any class and period, as a table, a grid or a page per pupil.</p>
       </div>
     </div>
-    <div class="card key-card">
-      <h2>Get started</h2>
-      <p>Choose a folder for your notes. Create one anywhere, or pick a folder that syncs — OneDrive, Dropbox and Google Drive all work — so your notes are backed up automatically. You can change folders at any time.</p>
-      <p id="folder-hint" hidden>Your browser needs permission to use the folder again.</p>
-      <div class="row">
-        <button class="btn primary" id="folder-button">Choose folder</button>
-        <span class="status" id="folder-status"></span>
-      </div>
-      <p class="intro-fine">Classcorder stores everything — classes, pupils and notes — only in that folder. When you record a spoken note, the audio goes to Mistral for transcription using your own API key (the next step). The finished note never leaves your computer.</p>
+    <p class="intro-lead">To start, pick a folder for your notes. Any folder will do. A synced one, like OneDrive, Dropbox or Google Drive, keeps a backup for you.</p>
+    <p id="folder-hint" hidden>Your browser needs permission to use the folder again.</p>
+    <div class="row">
+      <button class="btn primary" id="folder-button">Choose folder</button>
+      <span class="status" id="folder-status"></span>
     </div>
+    <p class="intro-fine">Classes, pupils and notes are stored only in that folder. Spoken recordings go to Mistral for transcription using your own API key, added in the next step. The finished notes stay on your computer.</p>
   </div>
 </template>
 
