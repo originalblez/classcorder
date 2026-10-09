@@ -14,7 +14,7 @@ const PRICE_POLISH_OUTPUT_PER_M = 1.5;
 const POLISH_PROMPT = `You tidy a speech-to-text transcript of a teacher's spoken note about a pupil into a formal school record entry.
 The transcript is given between <transcript> tags. It is the only source of information.
 Rules:
-- Professional British English, first person, past tense where natural. Write in the teacher's own voice: never refer to "the teacher" in the third person.
+- Professional British English, first person, in the transcript's own tense. Write in the teacher's own voice: never refer to "the teacher" in the third person.
 - Use only what the transcript says. Never add, infer, interpret, soften, strengthen or remove anything. If a word seems wrong or unclear, keep it as it is rather than guessing what was meant. Keep numbers and time words such as "today".
 - Keep names exactly as written.
 - Fix grammar and punctuation. Remove filler words, false starts and repetition.
