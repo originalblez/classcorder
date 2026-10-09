@@ -21,9 +21,6 @@ const okToLeaveDraft = async () => !recording() && (!hasUnsavedDraft() || confir
   confirmLabel: 'Discard note', cancelLabel: 'Keep editing', danger: true,
 }));
 
-// Pupils with no note for this many days are marked on the class roster.
-const QUIET_DAYS = 14;
-
 // The class roster column, shown beside the main screen while a pupil is open.
 function closeRoster() {
   $('#roster').hidden = true;
@@ -36,15 +33,11 @@ function showRoster(p, classes) {
   if (!klass) { closeRoster(); return; }
   roster.replaceChildren();
   roster.append(el('h3', { textContent: klass.name }));
-  // Only the current year marks pupils without a recent note; for past years it means nothing.
-  const since = Date.now() - QUIET_DAYS * 864e5;
   const ul = el('ul');
   for (const q of klass.pupils) {
-    const quiet = store.isCurrentYear() && (!q.last || new Date(q.last) < since);
-    const b = el('button', { className: (q.id === p.id ? 'active' : '') + (quiet ? ' quiet' : '') },
+    const b = el('button', { className: q.id === p.id ? 'active' : '' },
       el('span', { className: 'label', textContent: q.name }),
       el('span', { className: 'count', textContent: q.notes || '' }));
-    b.title = quiet ? `No note in the last ${QUIET_DAYS} days` : '';
     b.onclick = () => selectPupil({ ...q, className: klass.name });
     ul.append(el('li', {}, b));
   }
