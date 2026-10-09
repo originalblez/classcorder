@@ -121,7 +121,8 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 /* Sidebar sections */
 .node-button.klass { color: #d4d4da; }
 .node-button.klass:hover { background: var(--dark-2); }
-.node-button.klass.active { background: var(--pink); color: var(--ink); font-weight: 500; }
+.node-button.klass.active { background: var(--pink); color: var(--ink); font-weight: 500; cursor: default; }
+.node-button.klass.active:hover { background: var(--pink); }
 .node-button.active .count { color: var(--muted); }
 .btn.add-class { width: 100%; background: none; color: var(--on-dark); border: 1px dashed rgba(255, 255, 255, .2); padding: 10px 14px; }
 .btn.add-class:hover { background: var(--dark-2); }

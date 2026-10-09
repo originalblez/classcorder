@@ -287,7 +287,11 @@ function classList() {
 // Highlights the open pupil, and its class, in the sidebar.
 function markActive() {
   for (const b of document.querySelectorAll('#tree [data-pupil]')) b.classList.toggle('active', b.dataset.pupil === current?.id);
-  for (const b of document.querySelectorAll('#tree [data-class]')) b.classList.toggle('active', b.dataset.class === current?.class_id);
+  for (const b of document.querySelectorAll('#tree [data-class]')) {
+    const here = b.dataset.class === current?.class_id;
+    b.classList.toggle('active', here);
+    here ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current');
+  }
 }
 
 async function chooseYear(y) {
