@@ -1,0 +1,12 @@
+[project]
+name = "classcorder"
+version = "0.1.0"
+description = "Classcorder: voice notes transcribed with Mistral, saved against pupil records"
+authors = [
+    { name = "Sean Blezard", email = "originalblez@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.142.2",
+    "uvicorn[standard]>=0.54.0",
+]

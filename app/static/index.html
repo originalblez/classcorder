@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Only this site's own scripts may run, and the page may only connect to Mistral. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.mistral.ai; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Classcorder</title>
+<link rel="icon" type="image/png" href="./images/favicon.png">
+<link rel="apple-touch-icon" href="./images/apple-touch-icon.png">
+<link rel="stylesheet" href="./app.css">
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <div class="brand">
+      <img class="logo" src="./images/logo.png" alt="">
+      <span class="wordmark" aria-hidden="true">Classc<span class="rec-o"></span>rder</span>
+      <span class="sr-only">Classcorder</span>
+    </div>
+    <button class="side-link" id="nav-reports" hidden><span class="ico i-table"></span> Reports</button>
+    <div class="find" id="find-box" hidden>
+      <span class="ico i-search"></span>
+      <input type="search" id="find" placeholder="Find pupil" autocomplete="off" spellcheck="false"
+        role="combobox" aria-expanded="false" aria-controls="find-results" aria-label="Find pupil">
+      <kbd>/</kbd>
+      <ul class="find-results" id="find-results" role="listbox" hidden></ul>
+    </div>
+    <nav class="tree" id="tree" aria-label="Recent pupils, school years and classes"></nav>
+    <button class="btn add-class" id="add-class" hidden></button>
+    <button class="side-link" id="nav-settings" hidden><span class="ico i-settings"></span> Settings</button>
+  </aside>
+  <main id="main"></main>
+</div>
+<dialog class="modal" id="modal" aria-labelledby="modal-title"></dialog>
+<dialog class="modal" id="confirm" aria-labelledby="confirm-title"></dialog>
+
+<template id="folder-view">
+  <div class="card key-card">
+    <h2>Choose your Teacher Notes folder</h2>
+    <p>Pupils and notes are saved in a folder on this computer. Choose (or create) a folder called <strong>Teacher Notes</strong> inside your OneDrive so it is backed up and synced. The app creates <strong>Data</strong> and <strong>Exports</strong> folders inside it.</p>
+    <p id="folder-hint" hidden>Your browser needs permission to use the folder again.</p>
+    <div class="row">
+      <button class="btn primary" id="folder-button">Choose folder</button>
+      <span class="status" id="folder-status"></span>
+    </div>
+  </div>
+</template>
+
+<template id="year-modal">
+  <form class="modal-form">
+    <header>
+      <h2 id="modal-title"></h2>
+      <p class="sub">Each school year's classes, pupils and notes are kept in their own file in the Data folder.</p>
+    </header>
+    <div class="modal-body">
+      <label class="check" id="y-copy-row">
+        <input type="checkbox" id="y-copy" checked>
+        <span><strong id="y-copy-title"></strong><span class="sub">Notes aren't copied. They stay with the old year.</span></span>
+      </label>
+      <p class="status error" id="y-error"></p>
+    </div>
+    <footer>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button class="btn primary">Start school year</button>
+    </footer>
+  </form>
+</template>
+
+<template id="class-modal">
+  <form class="modal-form wide">
+    <header>
+      <h2 id="modal-title"></h2>
+      <p class="sub" id="m-sub"></p>
+    </header>
+    <div class="modal-body">
+      <label class="field">Class name
+        <input id="m-name" placeholder="For example 7B or Year 3 Maple" autocomplete="off">
+      </label>
+      <section class="field" id="m-pupils-section">
+        <span>Pupils <span class="count" id="m-count"></span></span>
+        <ul class="pupil-edit" id="m-pupils"></ul>
+        <p class="status error" id="m-summary"></p>
+      </section>
+      <label class="field"><span>Add pupils <span class="count" id="m-add-count"></span></span>
+        <textarea id="m-add" placeholder="One name per line. You can paste a column of names from a spreadsheet."></textarea>
+      </label>
+      <p class="status error" id="m-error"></p>
+    </div>
+    <footer>
+      <button type="button" class="btn danger" id="m-delete">Delete class</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="m-save">Save</button>
+    </footer>
+  </form>
+</template>
+
+<template id="reports-view">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow" id="r-year"></p>
+      <h2>Reports</h2>
+    </div>
+  </header>
+  <section class="report-controls" id="r-controls">
+    <div class="controls-bar">
+      <button type="button" class="nav-arrow" id="r-bar-prev" aria-label="Previous">&lsaquo;</button>
+      <span class="bar-summary" id="r-summary"></span>
+      <button type="button" class="nav-arrow" id="r-bar-next" aria-label="Next">&rsaquo;</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn small light" id="r-bar-print">Print</button>
+      <button type="button" class="btn small dark" id="r-toggle"></button>
+    </div>
+    <div class="controls-full">
+     <div class="controls-inner">
+    <div class="control-row">
+      <label class="control"><span>Class</span><select id="r-class"></select></label>
+      <div class="control"><span>Period</span><div class="segmented" id="r-period"></div></div>
+    </div>
+    <div class="control-row">
+      <div class="control" id="r-date-control"><span id="r-date-label">Date</span>
+        <div class="date-nav">
+          <button type="button" class="nav-arrow" id="r-prev" aria-label="Previous">&lsaquo;</button>
+          <input type="date" id="r-date">
+          <button type="button" class="nav-arrow" id="r-next" aria-label="Next">&rsaquo;</button>
+          <button type="button" class="btn small dark" id="r-today">Today</button>
+        </div>
+      </div>
+      <label class="control" id="r-to-control"><span>To</span><input type="date" id="r-to"></label>
+    </div>
+    <div class="control-row">
+      <div class="control"><span>Layout</span><div class="segmented" id="r-layout"></div></div>
+      <div class="control"><span>Include</span>
+        <div class="toggles">
+          <label><input type="checkbox" id="r-empty"> Pupils with no notes</label>
+          <label><input type="checkbox" id="r-transcript"> Original transcripts</label>
+          <label id="r-breaks-row"><input type="checkbox" id="r-breaks"> New page per pupil</label>
+        </div>
+      </div>
+    </div>
+    <div class="control-row actions-row">
+      <label class="control inline"><span>Preset</span><select id="r-preset"></select></label>
+      <button type="button" class="btn small dark" id="r-save-preset">Save as preset</button>
+      <button type="button" class="btn small dark" id="r-delete-preset">Delete preset</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn dark" id="r-copy">Copy for Excel or Word</button>
+      <button type="button" class="btn dark" id="r-csv">Save CSV</button>
+      <button type="button" class="btn light" id="r-print">Print</button>
+    </div>
+     </div>
+    </div>
+    <p class="status" id="r-status"></p>
+  </section>
+  <article class="report-paper" id="r-paper"></article>
+</template>
+
+<template id="preset-modal">
+  <form class="modal-form">
+    <header>
+      <h2 id="modal-title">Save preset</h2>
+      <p class="sub">Saves the class, period, layout and include options, but not the dates. Saving with an existing name replaces that preset.</p>
+    </header>
+    <div class="modal-body">
+      <label class="field">Preset name
+        <input id="p-name" placeholder="For example 7A weekly grid" autocomplete="off">
+      </label>
+      <p class="status error" id="p-error"></p>
+    </div>
+    <footer>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button class="btn primary">Save preset</button>
+    </footer>
+  </form>
+</template>
+
+<template id="confirm-modal">
+  <form class="modal-form">
+    <header>
+      <h2 id="confirm-title"></h2>
+      <p class="sub confirm-text" id="c-text"></p>
+    </header>
+    <footer>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="c-cancel">Cancel</button>
+      <button class="btn primary" id="c-ok">OK</button>
+    </footer>
+  </form>
+</template>
+
+<template id="settings-view">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Classcorder</p>
+      <h2>Settings</h2>
+    </div>
+  </header>
+  <section class="card settings">
+    <div class="setting">
+      <div>
+        <h3>Notes folder</h3>
+        <p>Saving to <strong id="s-folder"></strong>. Keep it inside OneDrive so it is backed up.</p>
+      </div>
+      <button class="btn" id="s-change-folder">Change folder</button>
+    </div>
+    <div class="setting">
+      <div>
+        <h3>Export everything</h3>
+        <p id="s-export-text"></p>
+      </div>
+      <button class="btn" id="s-export-all">Export all (Excel)</button>
+    </div>
+    <div class="setting">
+      <div>
+        <h3>Mistral</h3>
+        <p id="s-spend"></p>
+        <p class="sub">Mistral bills your own account. Set a monthly spending limit in the Mistral console.</p>
+      </div>
+      <button class="btn" id="s-key"></button>
+    </div>
+  </section>
+</template>
+
+<template id="class-view">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow" id="c-context"></p>
+      <h2></h2>
+    </div>
+    <div class="row">
+      <button class="btn" id="c-report"><span class="ico i-table"></span> Report</button>
+      <button class="btn primary" id="c-edit">Edit class</button>
+    </div>
+  </header>
+  <div class="class-tools" id="c-tools">
+    <label class="filter"><span class="ico i-search"></span><input type="search" id="c-filter" placeholder="Filter pupils" autocomplete="off" spellcheck="false" aria-label="Filter pupils"></label>
+    <p class="status" id="c-summary"></p>
+  </div>
+  <div class="pupil-grid" id="c-pupils"></div>
+</template>
+
+<template id="unsupported-view">
+  <div class="card key-card">
+    <h2>Please use Chrome or Edge</h2>
+    <p>This app saves notes into a folder on your computer, which only Chrome and Microsoft Edge allow. Open this page in one of those browsers.</p>
+  </div>
+</template>
+
+<template id="key-view">
+  <div class="card key-card">
+    <h2>Connect to Mistral</h2>
+    <p>Enter your Mistral API key. Recordings and transcripts are sent to Mistral for transcription and tidying. Notes are saved only in your Teacher Notes folder.</p>
+    <form id="key-form">
+      <input type="text" name="username" value="Mistral API key" autocomplete="username" hidden>
+      <input type="password" name="password" id="key-input" placeholder="API key" autocomplete="current-password" required>
+      <ul>
+        <li>Let the browser save it in its password manager when asked, so you don't need to type it again.</li>
+        <li>Set a monthly spending limit in the Mistral console.</li>
+      </ul>
+      <div class="row">
+        <button class="btn primary" id="key-save">Connect</button>
+        <span class="status" id="key-status"></span>
+      </div>
+    </form>
+  </div>
+</template>
+
+<template id="pupil-view">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow"><button class="crumb" id="pupil-class" title="Back to the class"></button> · <span id="pupil-year"></span></p>
+      <h2></h2>
+    </div>
+    <div class="row">
+      <button class="round" id="prev-pupil" title="Previous pupil" aria-label="Previous pupil"><span class="ico i-prev"></span></button>
+      <button class="round" id="next-pupil" title="Next pupil" aria-label="Next pupil"><span class="ico i-next"></span></button>
+      <button class="round" id="export-pupil" title="Export notes to the Exports folder" aria-label="Export notes"><span class="ico i-export"></span></button>
+      <button class="round danger" id="delete-pupil" title="Delete pupil" aria-label="Delete pupil"><span class="ico i-trash"></span></button>
+    </div>
+  </header>
+  <p class="banner" id="past-year" hidden>This is a past school year. You can edit or delete notes, but new notes go in the current year.</p>
+  <section class="composer" id="recorder">
+    <div class="composer-bar">
+      <button class="rec-button" id="rec"><span class="rec-dot"></span><span id="rec-label">Record</span></button>
+      <canvas id="wave" aria-hidden="true"></canvas>
+      <span class="timer" id="timer">0:00</span>
+    </div>
+    <div class="composer-body">
+      <textarea id="draft" placeholder="Press Record and speak, or type a note here. The tidied note appears here for you to check and edit."></textarea>
+      <details class="original" id="original" hidden>
+        <summary>Original transcript</summary>
+        <p id="original-text"></p>
+        <button class="btn small" id="use-original">Use original instead</button>
+      </details>
+      <div class="composer-foot">
+        <p class="status" id="status">Press Record and speak your note.</p>
+        <button class="btn" id="discard" disabled>Discard</button>
+        <button class="btn primary" id="save" disabled>Save note</button>
+      </div>
+    </div>
+  </section>
+  <h3 class="section-title">Notes <span class="count" id="note-count"></span></h3>
+  <div id="notes"></div>
+</template>
+</body>
+</html>
