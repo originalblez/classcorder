@@ -183,9 +183,7 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 .composer-foot .status { flex: 1; margin: 0; min-height: 2.8em; line-height: 1.4; padding-top: 2px; }
 .timer { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--on-dark-muted); min-width: 3em; text-align: right; }
 .timer.live { color: var(--on-dark); }
-details.original { margin-top: 10px; font-size: 13px; color: var(--muted); }
-details.original summary { cursor: pointer; }
-details.original p { margin: 6px 0 8px; white-space: pre-wrap; color: var(--ink-soft); }
+.composer-foot { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }
 
 .section-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin: 0 0 12px; }
 .section-title .count { margin-left: 0; color: var(--muted); }
@@ -306,7 +304,6 @@ dialog.modal::backdrop { background: rgba(15, 15, 20, .35); backdrop-filter: blu
 .report-note { margin: 0 0 10px; }
 .report-note .when { font-size: 12px; font-weight: 600; color: var(--muted); }
 .report-note p { margin: 2px 0 0; white-space: pre-wrap; line-height: 1.6; }
-.report-note .transcript { font-size: 13px; color: var(--muted); }
 
 @media print {
   @page { margin: 14mm; }

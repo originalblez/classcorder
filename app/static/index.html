@@ -161,7 +161,6 @@
       <div class="control"><span>Include</span>
         <div class="toggles">
           <label><input type="checkbox" id="r-empty"> Pupils with no notes</label>
-          <label><input type="checkbox" id="r-transcript"> Original transcripts</label>
           <label id="r-breaks-row"><input type="checkbox" id="r-breaks"> New page per pupil</label>
         </div>
       </div>
@@ -308,11 +307,6 @@
     </div>
     <div class="composer-body">
       <textarea id="draft" placeholder="Press Record and speak, or type a note here. Recordings are tidied automatically; press Tidy to clean up typed text."></textarea>
-      <details class="original" id="original" hidden>
-        <summary>Original transcript</summary>
-        <p id="original-text"></p>
-        <button class="btn small" id="use-original">Use original instead</button>
-      </details>
       <div class="composer-foot">
         <p class="status" id="status">Press Record and speak your note.</p>
         <button class="btn" id="tidy" disabled>Tidy</button>

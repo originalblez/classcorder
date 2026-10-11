@@ -9,7 +9,7 @@ import { $, el, plural, openModal, confirmModal } from './dom.js';
 const SETTINGS_KEY = 'report:settings';
 const PRESETS_KEY = 'report:presets';
 const COLLAPSED_KEY = 'report:collapsed';
-const DEFAULTS = { classId: 'all', period: 'week', layout: 'table', empty: true, transcript: false, pageBreaks: false };
+const DEFAULTS = { classId: 'all', period: 'week', layout: 'table', empty: true, pageBreaks: false };
 const PERIODS = { day: 'Day', week: 'Week', month: 'Month', year: 'School year', custom: 'Custom' };
 const LAYOUTS = { table: 'Table', grid: 'Pupils × days', pupil: 'By pupil' };
 const GRID_MAX_DAYS = 7;
@@ -112,15 +112,15 @@ async function build() {
 
 // Rows and columns for the table layout (also used to export the by-pupil layout).
 function tableModel(r) {
-  const columns = [...(r.multi ? ['Class'] : []), 'Pupil', 'Date', 'Time', 'Note', ...(settings.transcript ? ['Original transcript'] : [])];
+  const columns = [...(r.multi ? ['Class'] : []), 'Pupil', 'Date', 'Time', 'Note'];
   const rows = [];
   for (const g of r.groups) {
     for (const { pupil, notes } of g.pupils) {
       const lead = [...(r.multi ? [g.klass.name] : []), pupil.name];
-      if (!notes.length) rows.push([...lead, '', '', '', ...(settings.transcript ? [''] : [])]);
+      if (!notes.length) rows.push([...lead, '', '', '']);
       for (const n of notes) {
         const when = new Date(n.created_at);
-        rows.push([...lead, fmt(when, SHORT), formatTime(n.created_at), n.text, ...(settings.transcript ? [n.transcript ?? ''] : [])]);
+        rows.push([...lead, fmt(when, SHORT), formatTime(n.created_at), n.text]);
       }
     }
   }
@@ -138,7 +138,7 @@ function gridModel(r) {
     for (const { pupil, notes } of g.pupils) {
       rows.push([...(r.multi ? [g.klass.name] : []), pupil.name, ...days.map(d => notes
         .filter(n => key(new Date(n.created_at)) === key(d))
-        .map(n => (settings.transcript && n.transcript && n.transcript !== n.text ? `${n.text}\n(Original: ${n.transcript})` : n.text))
+        .map(n => n.text)
         .join('\n\n'))]);
     }
   }
@@ -163,9 +163,6 @@ function byPupilElement(r) {
       if (!notes.length) section.append(el('p', { className: 'empty', textContent: 'No notes in this period.' }));
       for (const n of notes) {
         const item = el('div', { className: 'report-note' }, el('span', { className: 'when', textContent: formatWhen(n.created_at) }), el('p', { textContent: n.text }));
-        if (settings.transcript && n.transcript && n.transcript !== n.text) {
-          item.append(el('p', { className: 'transcript', textContent: `Original transcript: ${n.transcript}` }));
-        }
         section.append(item);
       }
       wrap.append(section);
@@ -225,7 +222,6 @@ export function show(main, onRouteChange) {
 
   $('#r-class', main).onchange = e => change({ classId: e.target.value });
   $('#r-empty', main).onchange = e => change({ empty: e.target.checked });
-  $('#r-transcript', main).onchange = e => change({ transcript: e.target.checked });
   $('#r-breaks', main).onchange = e => change({ pageBreaks: e.target.checked });
   $('#r-prev', main).onclick = () => { step(-1); dateChanged(); };
   $('#r-next', main).onclick = () => { step(1); dateChanged(); };
@@ -309,7 +305,6 @@ async function update() {
   $('#r-date').value = isoDate(date);
   $('#r-to').value = until ? isoDate(until) : '';
   $('#r-empty').checked = settings.empty;
-  $('#r-transcript').checked = settings.transcript;
   $('#r-breaks').checked = settings.pageBreaks;
   $('#r-breaks-row').hidden = settings.layout !== 'pupil';
 

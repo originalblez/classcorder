@@ -225,14 +225,12 @@ export const deletePupil = id =>
 
 export const listNotes = async pupilId => (await read()).notes.filter(n => n.pupil_id === pupilId).sort(newest);
 
-// transcript: the raw speech-to-text output, kept alongside the final text for reference.
 // cost_usd: estimated Mistral cost of producing the note.
-export async function addNote(pupilId, text, { transcript = null, cost_usd = null } = {}) {
+export async function addNote(pupilId, text, { cost_usd = null } = {}) {
   text = text.trim();
   if (!text) throw new Error('Note is empty');
   return update(data => {
     const note = { id: crypto.randomUUID(), pupil_id: pupilId, text, created_at: new Date().toISOString() };
-    if (transcript) note.transcript = transcript;
     if (cost_usd != null) note.cost_usd = cost_usd;
     data.notes.push(note);
     return note;
@@ -296,8 +294,8 @@ export async function exportAllCsv() {
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const rows = data.notes
     .sort((a, b) => key(a).localeCompare(key(b)))
-    .map(n => [pupils.get(n.pupil_id)?.klass, pupils.get(n.pupil_id)?.name, formatDate(n.created_at), n.text, n.transcript].map(cell).join(','));
-  const header = ['Class', 'Pupil', 'Date', 'Note', 'Original transcript'];
+    .map(n => [pupils.get(n.pupil_id)?.klass, pupils.get(n.pupil_id)?.name, formatDate(n.created_at), n.text].map(cell).join(','));
+  const header = ['Class', 'Pupil', 'Date', 'Note'];
   const csv = '﻿' + [header.map(cell).join(','), ...rows].join('\r\n') + '\r\n';
   return writeExport(`All notes ${year} (${today()}).csv`, csv);
 }

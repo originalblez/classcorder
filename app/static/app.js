@@ -10,11 +10,8 @@ let current = null;      // selected pupil
 let view = null;         // 'reports' or 'settings' while that screen is open
 let yearCollapsed = false;
 let recorder = null, busy = false;
-// The note being drafted: raw transcripts of each recording and their estimated cost.
-let draftTranscripts = [], draftCost = 0;
-// Whether the draft was last written by the tidy step, so tidying twice doesn't add
-// the same text to the original transcript twice.
-let draftTidied = false;
+// The note being drafted: the estimated cost of tidying it, if AI was used.
+let draftCost = 0;
 
 const recording = () => busy || recorder?.state === 'recording';
 const hasUnsavedDraft = () => !!$('#draft')?.value.trim();
@@ -569,17 +566,9 @@ function updateButtons() {
   $('#discard').disabled = busy || !has;
 }
 function resetDraft() {
-  draftTranscripts = [];
   draftCost = 0;
-  draftTidied = false;
   $('#draft').value = '';
-  showOriginal();
   updateButtons();
-}
-function showOriginal() {
-  $('#original').hidden = !draftTranscripts.length;
-  $('#original').open = false;
-  $('#original-text').textContent = draftTranscripts.join('\n\n');
 }
 
 let selecting = 0;  // the latest selectPupil call; earlier ones that finish later are dropped
@@ -593,9 +582,7 @@ async function selectPupil(p) {
   current = p;
   view = null;
   saveRoute();
-  draftTranscripts = [];
   draftCost = 0;
-  draftTidied = false;
   markActive();
   const main = $('#main');
   main.replaceChildren($('#pupil-view').content.cloneNode(true));
@@ -627,8 +614,7 @@ async function selectPupil(p) {
   $('#save').onclick = saveNote;
   $('#discard').onclick = resetDraft;
   $('#tidy').onclick = tidyDraft;
-  $('#use-original').onclick = () => { $('#draft').value = draftTranscripts.join('\n\n'); updateButtons(); };
-  $('#draft').oninput = () => { draftTidied = false; updateButtons(); };
+  $('#draft').oninput = updateButtons;
   $('#export-pupil').onclick = async () => {
     try {
       const path = await store.exportPupil(p);
@@ -691,9 +677,6 @@ function noteElement(n) {
       el('div', {}, el('strong', { textContent: formatDate(n.created_at) }), el('span', { className: 'meta', textContent: meta.join(' · ') })),
       el('div', { className: 'actions' }, edit, del)),
     text);
-  if (n.transcript && n.transcript !== n.text) {
-    body.append(el('details', {}, el('summary', { textContent: 'Original transcript' }), el('p', { textContent: n.transcript })));
-  }
   const div = el('article', { className: 'note' }, el('span', { className: 'tile' }, el('span', { className: 'ico i-note' })), body);
 
   del.onclick = async () => {
@@ -863,11 +846,9 @@ async function processRecording(blob, seconds) {
     setStatus('Tidying…');
     const polished = await mistral.polish(apiKey, transcript.text);
     const cost = transcript.cost + polished.cost;
-    draftTranscripts.push(transcript.text);
     draftCost += cost;
     const existing = draft.value.trim();
     draft.value = existing ? `${existing}\n\n${polished.text}` : polished.text;
-    showOriginal();
     const secs = ((performance.now() - started) / 1000).toFixed(1);
     const costText = `est. cost ${mistral.formatCost(cost)} (transcription ${mistral.formatCost(transcript.cost)}, tidy ${mistral.formatCost(polished.cost)})`;
     if (polished.rejected) {
@@ -880,11 +861,9 @@ async function processRecording(blob, seconds) {
   } catch (e) {
     if (transcript?.text && !viewChanged()) {
       // Keep the transcript if only the tidy step failed.
-      draftTranscripts.push(transcript.text);
       draftCost += transcript.cost;
       const existing = draft.value.trim();
       draft.value = existing ? `${existing}\n\n${transcript.text}` : transcript.text;
-      showOriginal();
     }
     if (e instanceof mistral.ApiKeyError) {
       forgetKey();
@@ -900,8 +879,7 @@ async function processRecording(blob, seconds) {
   }
 }
 
-// Tidies a typed note through the same step as a recording. The typed text is kept
-// as the original transcript, so it can be compared and restored.
+// Tidies a typed note through the same step as a recording.
 async function tidyDraft() {
   const draft = $('#draft');
   const transcript = draft.value.trim();
@@ -912,14 +890,7 @@ async function tidyDraft() {
   try {
     const polished = await mistral.polish(apiKey, transcript);
     draftCost += polished.cost;
-    if (polished.text !== transcript) {
-      // The typed text becomes the original transcript. Tidying already-tidied text
-      // rewrites the draft in place without adding another copy of the original.
-      if (!draftTidied) draftTranscripts.push(transcript);
-      draft.value = polished.text;
-      draftTidied = true;
-      showOriginal();
-    }
+    draft.value = polished.text;
     const costText = `est. cost ${mistral.formatCost(polished.cost)}`;
     setStatus(polished.rejected
       ? `Couldn't tidy this reliably, so your text is unchanged · ${costText}`
@@ -944,8 +915,7 @@ async function tidyDraft() {
 async function saveNote() {
   try {
     await store.addNote(current.id, $('#draft').value, {
-      transcript: draftTranscripts.join('\n\n') || null,
-      cost_usd: draftTranscripts.length ? draftCost : null,
+      cost_usd: draftCost ? draftCost : null,
     });
   } catch (err) {
     setStatus(`Could not save: ${err.message}`, true);
