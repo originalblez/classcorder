@@ -934,7 +934,14 @@ async function tidyDraft() {
   }
 }
 
+// The save writes to the notes folder, which can take a moment when the folder
+// syncs. While it runs the buttons are disabled and the status says so, so a
+// second press can't save the same note twice.
 async function saveNote() {
+  if (busy) return;
+  busy = true;
+  updateButtons();
+  setStatus('Saving…');
   try {
     await store.addNote(current.id, $('#draft').value, {
       cost_usd: draftCost ? draftCost : null,
@@ -942,6 +949,9 @@ async function saveNote() {
   } catch (err) {
     setStatus(`Could not save: ${err.message}`, true);
     return;
+  } finally {
+    busy = false;
+    if ($('#rec')) updateButtons();
   }
   resetDraft();
   setStatus('Saved.');
