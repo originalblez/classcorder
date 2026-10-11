@@ -3,13 +3,13 @@
 
 const API = 'https://api.mistral.ai/v1';
 const TRANSCRIBE_MODEL = 'voxtral-mini-latest';
-const POLISH_MODEL = 'mistral-large-latest';
+const POLISH_MODEL = 'mistral-small-latest';
 
 // Published prices in USD, used only for the cost estimate shown after each note.
 // Check https://mistral.ai/pricing and update if they change.
 const PRICE_TRANSCRIBE_PER_MINUTE = 0.003;
-const PRICE_POLISH_INPUT_PER_M = 0.5;
-const PRICE_POLISH_OUTPUT_PER_M = 1.5;
+const PRICE_POLISH_INPUT_PER_M = 0.15;
+const PRICE_POLISH_OUTPUT_PER_M = 0.6;
 
 const POLISH_PROMPT = `You tidy a speech-to-text transcript of a teacher's spoken feedback to a pupil.
 The transcript is given between <transcript> tags. It is the only source of information.
