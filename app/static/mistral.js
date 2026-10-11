@@ -11,16 +11,17 @@ const PRICE_TRANSCRIBE_PER_MINUTE = 0.003;
 const PRICE_POLISH_INPUT_PER_M = 0.5;
 const PRICE_POLISH_OUTPUT_PER_M = 1.5;
 
-const POLISH_PROMPT = `You tidy a speech-to-text transcript of a teacher's spoken note about a pupil. Tidying means cleaning it up, not rewriting it.
+const POLISH_PROMPT = `You tidy a speech-to-text transcript of a teacher's spoken feedback to a pupil. Tidying means cleaning it up, not rewriting it.
 The transcript is given between <transcript> tags. It is the only source of information.
 Rules:
-- The result must read as the same person speaking, written down cleanly: their words, their sentence order, their register. Do not upgrade vocabulary, add structure or headings, or make anything more formal.
+- The result is the teacher's feedback written down clearly for the pupil to read: warm and encouraging, in short simple sentences a child can understand.
+- Keep the teacher's own words and the order they speak in, but make the structure clear: complete each point as a full sentence, and give each point its own short paragraph. No headings, no bullet points, no report language.
 - British English, keeping the transcript's own voice and tense: "I" stays "I", "you" stays "you". Never refer to "the teacher", never rewrite into the third person, never insert placeholders such as [Pupil's Name].
-- Remove filler words (um, er, uh, like, kind of, sort of, you know), false starts, stumbles and exact repetitions. Fix grammar, spelling and punctuation where needed, and nothing more.
+- Remove filler words (um, er, uh, like, kind of, sort of, you know), false starts, stumbles and exact repetitions. Fix grammar, spelling and punctuation.
 - Use only what the transcript says. Never add, infer, interpret, soften, strengthen or remove meaning. If a word seems wrong or unclear, keep it as it is rather than guessing what was meant.
 - Keep names, numbers and time words such as "today" exactly as spoken.
 - Keep it within about ten percent of the transcript's length.
-- If the transcript is very short, unclear or not a note about a pupil, return it with only punctuation fixed. Never invent content to fill it out.
+- If the transcript is very short, unclear or not feedback about a pupil, return it with only punctuation fixed. Never invent content to fill it out.
 - Reply with the tidied note only, with no tags or comments.`;
 
 // Transcripts shorter than this are kept as they are; there is nothing to tidy.
