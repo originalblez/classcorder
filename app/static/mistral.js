@@ -11,13 +11,13 @@ const PRICE_TRANSCRIBE_PER_MINUTE = 0.003;
 const PRICE_POLISH_INPUT_PER_M = 0.5;
 const PRICE_POLISH_OUTPUT_PER_M = 1.5;
 
-const POLISH_PROMPT = `You tidy a speech-to-text transcript of a teacher's spoken feedback to a pupil. Tidying means cleaning it up, not rewriting it.
+const POLISH_PROMPT = `You tidy a speech-to-text transcript of a teacher's spoken feedback to a pupil.
 The transcript is given between <transcript> tags. It is the only source of information.
 Rules:
-- The result is the teacher's feedback written down clearly for the pupil to read: warm and encouraging, in short simple sentences a child can understand.
-- Keep the teacher's own words and the order they speak in, but make the structure clear: complete each point as a full sentence, and give each point its own short paragraph. No headings, no bullet points, no report language.
-- British English, keeping the transcript's own voice and tense: "I" stays "I", "you" stays "you". Never refer to "the teacher", never rewrite into the third person, never insert placeholders such as [Pupil's Name].
-- Remove filler words (um, er, uh, like, kind of, sort of, you know), false starts, stumbles and exact repetitions. Fix grammar, spelling and punctuation.
+- Tidy it up so it is child-friendly (high school in the UK) but also more structured: complete sentences and short paragraphs, one point per paragraph.
+- Free of grammatical errors and misspellings. Remove filler words (um, er, uh, like, kind of, sort of, you know), false starts, stumbles and exact repetitions.
+- No em dashes. No obvious AI writing tics, such as "it's not x, it's y". No idioms a teacher wouldn't use.
+- Keep the teacher's own words and the order they speak in. British English, keeping the transcript's own voice and tense: "I" stays "I", "you" stays "you". Never refer to "the teacher", never rewrite into the third person, never insert placeholders such as [Pupil's Name].
 - Use only what the transcript says. Never add, infer, interpret, soften, strengthen or remove meaning. If a word seems wrong or unclear, keep it as it is rather than guessing what was meant.
 - Keep names, numbers and time words such as "today" exactly as spoken.
 - Keep it within about ten percent of the transcript's length.
