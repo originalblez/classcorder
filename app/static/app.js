@@ -12,6 +12,8 @@ let yearCollapsed = false;
 let recorder = null, busy = false;
 // The note being drafted: the estimated cost of tidying it, if AI was used.
 let draftCost = 0;
+// The draft's current selection as [start, end], or null; drives the Tidy button.
+let draftSel = null;
 
 const recording = () => busy || recorder?.state === 'recording';
 const hasUnsavedDraft = () => !!$('#draft')?.value.trim();
@@ -561,12 +563,13 @@ function setStatus(text, error = false) {
 function updateButtons() {
   const has = hasUnsavedDraft();
   $('#rec').disabled = busy;
-  $('#tidy').disabled = busy || !has;
   $('#save').disabled = busy || !has;
   $('#discard').disabled = busy || !has;
 }
 function resetDraft() {
   draftCost = 0;
+  draftSel = null;
+  if ($('#tidy')) $('#tidy').hidden = true;
   $('#draft').value = '';
   updateButtons();
 }
@@ -583,6 +586,7 @@ async function selectPupil(p) {
   view = null;
   saveRoute();
   draftCost = 0;
+  draftSel = null;
   markActive();
   const main = $('#main');
   main.replaceChildren($('#pupil-view').content.cloneNode(true));
@@ -615,6 +619,14 @@ async function selectPupil(p) {
   $('#discard').onclick = resetDraft;
   $('#tidy').onclick = tidyDraft;
   $('#draft').oninput = updateButtons;
+  // The Tidy button appears only while part of the draft is selected.
+  const draftEl = $('#draft');
+  const syncSelection = () => {
+    draftSel = draftEl.selectionStart !== draftEl.selectionEnd
+      ? [draftEl.selectionStart, draftEl.selectionEnd] : null;
+    $('#tidy').hidden = !draftSel;
+  };
+  for (const ev of ['select', 'keyup', 'mouseup']) draftEl.addEventListener(ev, syncSelection);
   $('#export-pupil').onclick = async () => {
     try {
       const path = await store.exportPupil(p);
@@ -880,23 +892,31 @@ async function processRecording(blob, seconds) {
 }
 
 // Tidies a typed note through the same step as a recording.
+// Tidies the selected part of the draft, splicing the tidied text back in place.
+// The Tidy button is only shown while text is selected.
 async function tidyDraft() {
   const draft = $('#draft');
-  const transcript = draft.value.trim();
-  if (!transcript || busy) return;
+  const sel = draft.selectionStart !== draft.selectionEnd
+    ? [draft.selectionStart, draft.selectionEnd] : draftSel;
+  if (!sel || busy) return;
+  const [start, end] = sel;
+  const transcript = draft.value.slice(start, end).trim();
+  if (!transcript) return;
   busy = true;
-  updateButtons();
   setStatus('Tidying…');
   try {
     const polished = await mistral.polish(apiKey, transcript);
     draftCost += polished.cost;
-    draft.value = polished.text;
+    draft.value = draft.value.slice(0, start) + polished.text + draft.value.slice(end);
+    draft.focus();
+    const caret = start + polished.text.length;
+    draft.setSelectionRange(caret, caret);
     const costText = `est. cost ${mistral.formatCost(polished.cost)}`;
     setStatus(polished.rejected
-      ? `Couldn't tidy this reliably, so your text is unchanged · ${costText}`
+      ? `Couldn't tidy this reliably, so the selected text is unchanged · ${costText}`
       : polished.skipped
-        ? `Too short to tidy, so the text is unchanged · ${costText}`
-        : `Tidied · ${costText}`);
+        ? `Too short to tidy, so the selected text is unchanged · ${costText}`
+        : `Tidied the selected text · ${costText}`);
   } catch (err) {
     if (err instanceof mistral.ApiKeyError) {
       forgetKey();
@@ -908,6 +928,8 @@ async function tidyDraft() {
     setStatus(err.message, true);
   } finally {
     busy = false;
+    draftSel = null;
+    if ($('#tidy')) $('#tidy').hidden = true;
     if ($('#rec')) updateButtons();
   }
 }
