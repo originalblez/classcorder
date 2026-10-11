@@ -65,6 +65,12 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 .wordmark { white-space: nowrap; }
 .rec-o { display: inline-block; width: .6em; height: .5em; vertical-align: baseline; background: radial-gradient(circle closest-side, var(--red) 92%, transparent 100%); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Tidy test page: a development tool for testing the tidy prompt */
+.tidy-test { max-width: 720px; margin: 0 auto; padding: 40px 24px; display: flex; flex-direction: column; gap: 14px; }
+.tidy-test h1 { margin: 0; font-size: 24px; letter-spacing: -.01em; }
+.tidy-test .sub { margin: 0; color: var(--ink-soft); }
+.tidy-test .meta { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
 /* Roster: the class's pupils beside the main screen while a pupil is open */
 #roster { position: sticky; top: 0; height: 100vh; background: var(--paper); border-right: 1px solid var(--line); padding: 24px 10px 16px; overflow-y: auto; }
 #roster h3 { margin: 0 0 10px; padding: 0 10px; font-size: 17px; font-weight: 650; letter-spacing: -.01em; color: var(--ink); }

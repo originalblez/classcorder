@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Only this site's own scripts may run, and the page may only connect to Mistral. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.mistral.ai; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Tidy test · Classcorder</title>
+<link rel="stylesheet" href="./app.css">
+<script type="module" src="./tidy-test.js"></script>
+</head>
+<body>
+<main class="tidy-test">
+  <h1>Tidy test</h1>
+  <p class="sub">Paste a transcript to run it through the tidy step the app uses, without recording anything. A development tool for testing the tidy prompt.</p>
+  <div class="card key-card" id="key-card" hidden>
+    <p>No API key is saved in this browser yet. Paste one to use it here; it's saved the same way as in the app.</p>
+    <div class="row">
+      <input type="password" id="key-input" placeholder="API key" autocomplete="off">
+      <button class="btn primary" id="key-save">Use key</button>
+    </div>
+    <p class="status" id="key-status"></p>
+  </div>
+  <label class="field">Transcript
+    <textarea id="in" placeholder="Paste the raw transcript here."></textarea>
+  </label>
+  <div class="row">
+    <button class="btn primary" id="run">Tidy</button>
+    <span class="status" id="status"></span>
+  </div>
+  <label class="field">Tidied output
+    <textarea id="out" placeholder="The tidied note appears here."></textarea>
+  </label>
+  <p class="meta" id="meta"></p>
+</main>
+</body>
+</html>
