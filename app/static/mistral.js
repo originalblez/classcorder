@@ -109,11 +109,20 @@ export async function polish(key, transcript) {
   });
   const usage = out.usage ?? {};
   const cost = ((usage.prompt_tokens ?? 0) * PRICE_POLISH_INPUT_PER_M + (usage.completion_tokens ?? 0) * PRICE_POLISH_OUTPUT_PER_M) / 1e6;
-  // Em dashes are a model habit the prompt bans; any that slip through become commas.
+  // Notes are plain text. Markdown and em dashes are model habits the tidy should not
+  // ship, so anything that slips through is stripped here rather than trusted to the prompt.
   const text = out.choices[0].message.content
     .replace(/<\/?transcript>/g, '')
-    .replace(/\s*[–—]\s*/g, ', ')
+    .replace(/^#{1,6}\s+(.+)$/gm, '$1')      // headings
+    .replace(/^\s*[-*_]{3,}\s*$/gm, '')      // horizontal rules
+    .replace(/\*\*([^*]+)\*\*/g, '$1')       // bold
+    .replace(/\*([^*\n]+)\*/g, '$1')          // italics
+    .replace(/^\s*[-*+]\s+/gm, '')            // bullet points
+    .replace(/^\s*\d+\.\s+/gm, '')            // numbered lists
+    .replace(/`([^`]*)`/g, '$1')             // code
+    .replace(/\s*[–—]\s*/g, ', ')             // em dashes
     .replace(/,\s*,/g, ',')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
   const { added, ratio } = addedWords(transcript, text);
   if (added.length >= 4 && ratio >= 0.8) return { text: transcript, cost, rejected: true, added };
