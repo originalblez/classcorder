@@ -68,7 +68,7 @@ function showFolderForm(needsPermission) {
     } catch (err) {
       console.error('Folder selection failed', err);
       status.className = 'status error';
-      status.textContent = err.name === 'AbortError' ? `No folder chosen (${err.message})` : `${err.name}: ${err.message}`;
+      status.textContent = err.name === 'AbortError' ? 'No folder chosen.' : `${err.name}: ${err.message}`;
     }
   };
 }
