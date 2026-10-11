@@ -12,6 +12,9 @@ let yearCollapsed = false;
 let recorder = null, busy = false;
 // The note being drafted: raw transcripts of each recording and their estimated cost.
 let draftTranscripts = [], draftCost = 0;
+// Whether the draft was last written by the tidy step, so tidying twice doesn't add
+// the same text to the original transcript twice.
+let draftTidied = false;
 
 const recording = () => busy || recorder?.state === 'recording';
 const hasUnsavedDraft = () => !!$('#draft')?.value.trim();
@@ -568,6 +571,7 @@ function updateButtons() {
 function resetDraft() {
   draftTranscripts = [];
   draftCost = 0;
+  draftTidied = false;
   $('#draft').value = '';
   showOriginal();
   updateButtons();
@@ -591,6 +595,7 @@ async function selectPupil(p) {
   saveRoute();
   draftTranscripts = [];
   draftCost = 0;
+  draftTidied = false;
   markActive();
   const main = $('#main');
   main.replaceChildren($('#pupil-view').content.cloneNode(true));
@@ -623,7 +628,7 @@ async function selectPupil(p) {
   $('#discard').onclick = resetDraft;
   $('#tidy').onclick = tidyDraft;
   $('#use-original').onclick = () => { $('#draft').value = draftTranscripts.join('\n\n'); updateButtons(); };
-  $('#draft').oninput = updateButtons;
+  $('#draft').oninput = () => { draftTidied = false; updateButtons(); };
   $('#export-pupil').onclick = async () => {
     try {
       const path = await store.exportPupil(p);
@@ -906,10 +911,15 @@ async function tidyDraft() {
   setStatus('Tidying…');
   try {
     const polished = await mistral.polish(apiKey, transcript);
-    draftTranscripts.push(transcript);
     draftCost += polished.cost;
-    draft.value = polished.text;
-    showOriginal();
+    if (polished.text !== transcript) {
+      // The typed text becomes the original transcript. Tidying already-tidied text
+      // rewrites the draft in place without adding another copy of the original.
+      if (!draftTidied) draftTranscripts.push(transcript);
+      draft.value = polished.text;
+      draftTidied = true;
+      showOriginal();
+    }
     const costText = `est. cost ${mistral.formatCost(polished.cost)}`;
     setStatus(polished.rejected
       ? `Couldn't tidy this reliably, so your text is unchanged · ${costText}`
