@@ -182,7 +182,8 @@ function saveRoute() {
   if (view === 'settings') params.set('view', 'settings');
   $('#nav-reports').classList.toggle('active', view === 'reports');
   $('#nav-settings').classList.toggle('active', view === 'settings');
-  history.replaceState(null, '', params.size ? `#${params}` : location.pathname);
+  const base = location.pathname + location.search;
+  history.replaceState(null, '', params.size ? `${base}#${params}` : base);
 }
 
 // Opens the year and pupil in the URL. Returns true if a pupil was opened.
@@ -410,6 +411,7 @@ function showSettings() {
   $('#main').replaceChildren($('#settings-view').content.cloneNode(true));
   const year = store.selectedYear();
   $('#s-folder').textContent = store.folderName();
+  $('#s-change-folder').hidden = store.isTest();
   $('#s-change-folder').onclick = changeFolder;
   $('#s-export-text').textContent = year
     ? `Saves every class, pupil and note for ${year} as a spreadsheet file in the Exports folder.`
@@ -906,7 +908,12 @@ async function exportAll() {
 if (!store.supported()) {
   $('#main').replaceChildren($('#unsupported-view').content.cloneNode(true));
 } else {
-  const state = await store.restoreFolder().catch(() => 'not-chosen');
+  // ?test runs the app on the browser's own private storage, so it can be used where
+  // the folder picker cannot open (automated browsers intercept it).
+  const test = new URLSearchParams(location.search).has('test');
+  const state = test
+    ? await store.useTestFolder().then(() => 'connected').catch(() => 'not-chosen')
+    : await store.restoreFolder().catch(() => 'not-chosen');
   if (state === 'connected') folderReady();
   else showFolderForm(state === 'needs-permission');
 }

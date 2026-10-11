@@ -11,6 +11,8 @@ const YEAR_FILE = /^(\d{4}-\d{2})\.json$/;
 const SETTINGS_DB = 'pupil-notes-settings';
 
 let root = null;
+let rootName = null;
+let test = false;
 let year = null;  // the school year being viewed, e.g. "2026-27"
 
 export const supported = () => 'showDirectoryPicker' in window;
@@ -93,14 +95,24 @@ export async function chooseFolder() {
   await setting('folder', handle);
 }
 
-export const folderName = () => root?.name;
+export const folderName = () => rootName;
+export const isTest = () => test;
 
 // Connects to the folder and selects the current school year if it has a file,
 // otherwise the most recent year (or none, for a brand new folder).
-async function useFolder(handle) {
+async function useFolder(handle, name = handle.name) {
   root = handle;
+  rootName = name;
   const years = await listYears();
   year = years.includes(schoolYearFor()) ? schoolYearFor() : years[0] ?? null;
+}
+
+// Test mode: keep the data in the browser's own private storage (OPFS) instead of a
+// chosen folder, so the app can be used where the folder picker cannot open (automated
+// browsers intercept it). Nothing is saved to the teacher's computer.
+export async function useTestFolder() {
+  test = true;
+  await useFolder(await navigator.storage.getDirectory(), 'Private test folder');
 }
 
 const dataDir = () => root.getDirectoryHandle(DATA_DIR, { create: true });
