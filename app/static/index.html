@@ -296,7 +296,7 @@
       <span class="timer" id="timer">0:00</span>
     </div>
     <div class="composer-body">
-      <textarea id="draft" placeholder="Press Record and speak, or type a note here. The tidied note appears here for you to check and edit."></textarea>
+      <textarea id="draft" placeholder="Press Record and speak, or type a note here. Recordings are tidied automatically; press Tidy to clean up typed text."></textarea>
       <details class="original" id="original" hidden>
         <summary>Original transcript</summary>
         <p id="original-text"></p>
@@ -304,6 +304,7 @@
       </details>
       <div class="composer-foot">
         <p class="status" id="status">Press Record and speak your note.</p>
+        <button class="btn" id="tidy" disabled>Tidy</button>
         <button class="btn" id="discard" disabled>Discard</button>
         <button class="btn primary" id="save" disabled>Save note</button>
       </div>

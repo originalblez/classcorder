@@ -555,6 +555,7 @@ function setStatus(text, error = false) {
 function updateButtons() {
   const has = hasUnsavedDraft();
   $('#rec').disabled = busy;
+  $('#tidy').disabled = busy || !has;
   $('#save').disabled = busy || !has;
   $('#discard').disabled = busy || !has;
 }
@@ -614,6 +615,7 @@ async function selectPupil(p) {
   $('#rec').onclick = toggleRecording;
   $('#save').onclick = saveNote;
   $('#discard').onclick = resetDraft;
+  $('#tidy').onclick = tidyDraft;
   $('#use-original').onclick = () => { $('#draft').value = draftTranscripts.join('\n\n'); updateButtons(); };
   $('#draft').oninput = updateButtons;
   $('#export-pupil').onclick = async () => {
@@ -881,6 +883,42 @@ async function processRecording(blob, seconds) {
       return;
     }
     setStatus(e.message, true);
+  } finally {
+    busy = false;
+    if ($('#rec')) updateButtons();
+  }
+}
+
+// Tidies a typed note through the same step as a recording. The typed text is kept
+// as the original transcript, so it can be compared and restored.
+async function tidyDraft() {
+  const draft = $('#draft');
+  const transcript = draft.value.trim();
+  if (!transcript || busy) return;
+  busy = true;
+  updateButtons();
+  setStatus('Tidying…');
+  try {
+    const polished = await mistral.polish(apiKey, transcript);
+    draftTranscripts.push(transcript);
+    draftCost += polished.cost;
+    draft.value = polished.text;
+    showOriginal();
+    const costText = `est. cost ${mistral.formatCost(polished.cost)}`;
+    setStatus(polished.rejected
+      ? `Couldn't tidy this reliably, so your text is unchanged · ${costText}`
+      : polished.skipped
+        ? `Too short to tidy, so the text is unchanged · ${costText}`
+        : `Tidied · ${costText}`);
+  } catch (err) {
+    if (err instanceof mistral.ApiKeyError) {
+      forgetKey();
+      apiKey = null;
+      await notice(err.message, 'Please enter your Mistral API key again.');
+      showKeyForm();
+      return;
+    }
+    setStatus(err.message, true);
   } finally {
     busy = false;
     if ($('#rec')) updateButtons();
