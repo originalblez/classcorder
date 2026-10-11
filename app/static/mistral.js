@@ -17,6 +17,7 @@ Rules:
 - Tidy it up so it is child-friendly (high school in the UK) but also more structured: complete sentences and short paragraphs, one point per paragraph.
 - Free of grammatical errors and misspellings. Remove filler words (um, er, uh, like, kind of, sort of, you know), false starts, stumbles and exact repetitions.
 - No em dashes. No obvious AI writing tics, such as "it's not x, it's y". No idioms a teacher wouldn't use.
+- Do not add an opening or closing sentence. Start and end with the teacher's own words.
 - Keep the teacher's own words and the order they speak in. British English, keeping the transcript's own voice and tense: "I" stays "I", "you" stays "you". Never refer to "the teacher", never rewrite into the third person, never insert placeholders such as [Pupil's Name].
 - Use only what the transcript says. Never add, infer, interpret, soften, strengthen or remove meaning. If a word seems wrong or unclear, keep it as it is rather than guessing what was meant.
 - Keep names, numbers and time words such as "today" exactly as spoken.
@@ -107,7 +108,12 @@ export async function polish(key, transcript) {
   });
   const usage = out.usage ?? {};
   const cost = ((usage.prompt_tokens ?? 0) * PRICE_POLISH_INPUT_PER_M + (usage.completion_tokens ?? 0) * PRICE_POLISH_OUTPUT_PER_M) / 1e6;
-  const text = out.choices[0].message.content.replace(/<\/?transcript>/g, '').trim();
+  // Em dashes are a model habit the prompt bans; any that slip through become commas.
+  const text = out.choices[0].message.content
+    .replace(/<\/?transcript>/g, '')
+    .replace(/\s*[–—]\s*/g, ', ')
+    .replace(/,\s*,/g, ',')
+    .trim();
   const { added, ratio } = addedWords(transcript, text);
   if (added.length >= 4 && ratio >= 0.8) return { text: transcript, cost, rejected: true, added };
   return { text, cost, added };
