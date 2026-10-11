@@ -237,6 +237,23 @@ export async function addNote(pupilId, text, { cost_usd = null } = {}) {
   });
 }
 
+// Saves the same note against each listed pupil, as an individual note of their own,
+// in one write. The tidying cost is shared out so the year total stays true.
+export async function addGroupNote(pupilIds, text, { cost_usd = null } = {}) {
+  text = text.trim();
+  if (!text) throw new Error('Note is empty');
+  if (!pupilIds.length) throw new Error('Choose at least one pupil');
+  return update(data => {
+    const created_at = new Date().toISOString();
+    const share = cost_usd != null ? cost_usd / pupilIds.length : null;
+    for (const pupil_id of pupilIds) {
+      const note = { id: crypto.randomUUID(), pupil_id, text, created_at };
+      if (share != null) note.cost_usd = share;
+      data.notes.push(note);
+    }
+  });
+}
+
 export async function updateNote(id, text) {
   text = text.trim();
   if (!text) throw new Error('Note is empty');

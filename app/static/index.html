@@ -318,5 +318,34 @@
   <h3 class="section-title">Notes <span class="count" id="note-count"></span></h3>
   <div id="notes"></div>
 </template>
+
+<template id="group-view">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow"><span id="g-context"></span> · Group note</p>
+      <h2>Group note</h2>
+    </div>
+    <div class="row">
+      <button class="btn" id="g-done">Done</button>
+    </div>
+  </header>
+  <p class="banner" id="g-picked"></p>
+  <section class="composer" id="recorder">
+    <div class="composer-bar">
+      <button class="rec-button" id="rec"><span class="rec-dot"></span><span id="rec-label">Record</span></button>
+      <canvas id="wave" aria-hidden="true"></canvas>
+      <span class="timer" id="timer">0:00</span>
+    </div>
+    <div class="composer-body">
+      <textarea id="draft" placeholder="Press Record and speak, or type a note here. The note is saved against every pupil you choose in the roster."></textarea>
+      <div class="composer-foot">
+        <p class="status" id="status">Choose pupils in the roster, then record or type.</p>
+        <button class="btn" id="tidy" hidden>Tidy</button>
+        <button class="btn" id="discard" disabled>Discard</button>
+        <button class="btn primary" id="save" disabled>Save note</button>
+      </div>
+    </div>
+  </section>
+</template>
 </body>
 </html>

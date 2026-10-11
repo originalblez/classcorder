@@ -27,6 +27,7 @@ const okToLeaveDraft = async () => !recording() && (!hasUnsavedDraft() || confir
 function closeRoster() {
   $('#roster').hidden = true;
   $('.layout').classList.remove('with-roster');
+  groupMode = null;
 }
 
 function showRoster(p, classes) {
@@ -45,10 +46,107 @@ function showRoster(p, classes) {
   }
   roster.append(ul);
   if (store.isCurrentYear()) {
+    const group = el('button', { className: 'roster-edit', textContent: 'Group note' });
+    group.onclick = () => startGroupMode(klass);
+    roster.append(group);
     const edit = el('button', { className: 'roster-edit', textContent: 'Edit class' });
     edit.onclick = () => openClassModal(klass);
     roster.append(edit);
   }
+  roster.hidden = false;
+  $('.layout').classList.add('with-roster');
+}
+
+// --- Group notes: one spoken note saved against several pupils as individuals ---
+// While a group note is open, the roster becomes a picker and the composer saves
+// the same note to every chosen pupil, each as a note of their own.
+let groupMode = null;  // { classId, className, pupils, selected: Set }
+
+async function startGroupMode(klass) {
+  if (!(await okToLeaveDraft())) return;
+  groupMode = { classId: klass.id, className: klass.name, pupils: klass.pupils, selected: new Set() };
+  current = null;
+  view = 'group';
+  draftCost = 0;
+  draftSel = null;
+  markActive();
+  saveRoute();
+  const main = $('#main');
+  main.replaceChildren($('#group-view').content.cloneNode(true));
+  $('#g-context').textContent = `${klass.name} · ${store.selectedYear()}`;
+  $('#g-done').onclick = exitGroupMode;
+  drawWave([]);
+  wireComposer();
+  syncGroupPicked();
+  renderGroupRoster();
+  setStatus('Choose pupils in the roster, then record or type.');
+}
+
+async function exitGroupMode() {
+  const classId = groupMode?.classId;
+  if (!(await okToLeaveDraft())) return;
+  groupMode = null;
+  if (classId) await openClass(classId);
+  else await showEmpty();
+}
+
+// The Tidy button appears only while part of the draft is selected.
+function syncDraftSelection() {
+  const draft = $('#draft');
+  draftSel = draft.selectionStart !== draft.selectionEnd
+    ? [draft.selectionStart, draft.selectionEnd] : null;
+  $('#tidy').hidden = !draftSel;
+}
+
+// The composer is the same markup in the pupil and group views; this wires it up.
+function wireComposer() {
+  $('#rec').onclick = toggleRecording;
+  $('#save').onclick = saveNote;
+  $('#discard').onclick = resetDraft;
+  $('#tidy').onclick = tidyDraft;
+  $('#draft').oninput = updateButtons;
+  const draftEl = $('#draft');
+  for (const ev of ['select', 'keyup', 'mouseup']) draftEl.addEventListener(ev, syncDraftSelection);
+}
+
+function syncGroupPicked() {
+  const names = groupMode.pupils.filter(q => groupMode.selected.has(q.id)).map(q => q.name);
+  $('#g-picked').textContent = names.length
+    ? `For ${plural(names.length, 'pupil')}: ${names.join(', ')}`
+    : 'Choose pupils in the roster on the left. The note will be saved against each of them.';
+}
+
+function renderGroupRoster() {
+  const roster = $('#roster');
+  roster.replaceChildren();
+  const heading = el('h3', { textContent: groupMode.className });
+  if (groupMode.selected.size) heading.append(document.createTextNode(` · ${groupMode.selected.size} chosen`));
+  roster.append(heading);
+  const ul = el('ul');
+  for (const q of groupMode.pupils) {
+    const chosen = groupMode.selected.has(q.id);
+    const b = el('button', { className: chosen ? 'checked' : '' },
+      el('span', { className: 'check' }),
+      el('span', { className: 'label', textContent: q.name }));
+    b.setAttribute('aria-pressed', chosen);
+    b.onclick = () => {
+      chosen ? groupMode.selected.delete(q.id) : groupMode.selected.add(q.id);
+      renderGroupRoster();
+      syncGroupPicked();
+      updateButtons();
+    };
+    ul.append(el('li', {}, b));
+  }
+  roster.append(ul);
+  const all = el('button', { className: 'roster-edit', textContent: groupMode.selected.size === groupMode.pupils.length ? 'Clear all' : 'Choose all' });
+  all.onclick = () => {
+    groupMode.selected = groupMode.selected.size === groupMode.pupils.length
+      ? new Set() : new Set(groupMode.pupils.map(q => q.id));
+    renderGroupRoster();
+    syncGroupPicked();
+    updateButtons();
+  };
+  roster.append(all);
   roster.hidden = false;
   $('.layout').classList.add('with-roster');
 }
@@ -563,7 +661,7 @@ function setStatus(text, error = false) {
 function updateButtons() {
   const has = hasUnsavedDraft();
   $('#rec').disabled = busy;
-  $('#save').disabled = busy || !has;
+  $('#save').disabled = busy || !has || (groupMode && !groupMode.selected.size);
   $('#discard').disabled = busy || !has;
 }
 function resetDraft() {
@@ -587,6 +685,7 @@ async function selectPupil(p) {
   saveRoute();
   draftCost = 0;
   draftSel = null;
+  groupMode = null;
   markActive();
   const main = $('#main');
   main.replaceChildren($('#pupil-view').content.cloneNode(true));
@@ -621,12 +720,9 @@ async function selectPupil(p) {
   $('#draft').oninput = updateButtons;
   // The Tidy button appears only while part of the draft is selected.
   const draftEl = $('#draft');
-  const syncSelection = () => {
-    draftSel = draftEl.selectionStart !== draftEl.selectionEnd
-      ? [draftEl.selectionStart, draftEl.selectionEnd] : null;
-    $('#tidy').hidden = !draftSel;
-  };
-  for (const ev of ['select', 'keyup', 'mouseup']) draftEl.addEventListener(ev, syncSelection);
+  draftEl.addEventListener('select', syncDraftSelection);
+  draftEl.addEventListener('keyup', syncDraftSelection);
+  draftEl.addEventListener('mouseup', syncDraftSelection);
   $('#export-pupil').onclick = async () => {
     try {
       const path = await store.exportPupil(p);
@@ -837,15 +933,18 @@ async function processRecording(blob, seconds) {
   // underneath us, the result is discarded instead of landing on someone else.
   const pupilId = current?.id;
   const classId = current?.class_id;
+  const startedGroup = groupMode;
   const draft = $('#draft');
-  const viewChanged = () => current?.id !== pupilId || $('#draft') !== draft;
+  const viewChanged = () => groupMode !== startedGroup || current?.id !== pupilId || $('#draft') !== draft;
   busy = true;
   updateButtons();
   const started = performance.now();
   let transcript = null;
   try {
     setStatus('Transcribing…');
-    const names = (await store.listPupils(classId)).map(p => p.name);
+    const names = groupMode
+      ? groupMode.pupils.map(p => p.name)
+      : (await store.listPupils(classId)).map(p => p.name);
     transcript = await mistral.transcribe(apiKey, blob, names, seconds);
     if (!transcript.text) {
       setStatus('No speech detected. Try again.', true);
@@ -939,13 +1038,24 @@ async function tidyDraft() {
 // second press can't save the same note twice.
 async function saveNote() {
   if (busy) return;
+  if (groupMode && !groupMode.selected.size) {
+    setStatus('Choose at least one pupil in the roster.', true);
+    return;
+  }
+  const picked = groupMode ? groupMode.selected.size : 0;
   busy = true;
   updateButtons();
   setStatus('Saving…');
   try {
-    await store.addNote(current.id, $('#draft').value, {
-      cost_usd: draftCost ? draftCost : null,
-    });
+    if (groupMode) {
+      await store.addGroupNote([...groupMode.selected], $('#draft').value, {
+        cost_usd: draftCost ? draftCost : null,
+      });
+    } else {
+      await store.addNote(current.id, $('#draft').value, {
+        cost_usd: draftCost ? draftCost : null,
+      });
+    }
   } catch (err) {
     setStatus(`Could not save: ${err.message}`, true);
     return;
@@ -954,8 +1064,8 @@ async function saveNote() {
     if ($('#rec')) updateButtons();
   }
   resetDraft();
-  setStatus('Saved.');
-  renderNotes();
+  setStatus(groupMode ? `Saved to ${plural(picked, 'pupil')}.` : 'Saved.');
+  if (!groupMode) renderNotes();
   refreshSpend();
 }
 
