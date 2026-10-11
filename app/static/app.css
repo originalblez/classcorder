@@ -166,6 +166,8 @@ aside { position: sticky; top: 0; height: 100vh; background: var(--dark); color:
 .setting p { margin: 0; color: var(--ink-soft); font-size: 14px; }
 .setting p.sub { margin-top: 4px; color: var(--muted); font-size: 13px; }
 .setting .btn { flex: none; }
+.setting.column { flex-direction: column; align-items: stretch; }
+.setting textarea { font: inherit; background: var(--chip); border: 0; border-radius: 12px; padding: 10px 12px; min-height: 76px; resize: vertical; }
 /* Page headings */
 .page-head .btn { display: inline-flex; align-items: center; gap: 8px; }
 .page-head .btn .ico { width: 16px; height: 16px; }

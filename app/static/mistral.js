@@ -28,6 +28,17 @@ Rules:
 // Transcripts shorter than this are kept as they are; there is nothing to tidy.
 const MIN_WORDS_TO_POLISH = 6;
 
+// Extra tidy instructions the teacher can set in Settings, kept on their computer.
+const INSTRUCTIONS_KEY = 'tidy:instructions';
+
+export const customInstructions = () => {
+  try { return localStorage.getItem(INSTRUCTIONS_KEY)?.trim() || ''; } catch { return ''; }
+};
+
+export function saveCustomInstructions(text) {
+  try { localStorage.setItem(INSTRUCTIONS_KEY, text); } catch {}
+}
+
 // Function and linking words a formal rewrite may legitimately introduce.
 const ALLOWED_NEW_WORDS = new Set(('also then this that these those they them their there which while when with into from ' +
   'have been were will would could should about after before during within without because however although ' +
@@ -94,6 +105,7 @@ export async function polish(key, transcript) {
   if ((transcript.match(/\S+/g) ?? []).length < MIN_WORDS_TO_POLISH) {
     return { text: transcript, cost: 0, skipped: true };
   }
+  const extra = customInstructions();
   const out = await call('/chat/completions', key, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -101,7 +113,8 @@ export async function polish(key, transcript) {
       model: POLISH_MODEL,
       temperature: 0,
       messages: [
-        { role: 'system', content: POLISH_PROMPT },
+        { role: 'system', content: POLISH_PROMPT + (extra
+          ? `\n\nThe teacher's own additional instructions, which must also be followed:\n${extra}` : '') },
         { role: 'user', content: `<transcript>\n${transcript}\n</transcript>` },
       ],
     }),

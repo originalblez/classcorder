@@ -428,6 +428,12 @@ function showSettings() {
   const key = $('#s-key');
   key.textContent = apiKey ? 'Forget API key' : 'Connect';
   key.onclick = apiKey ? forgetApiKey : showKeyForm;
+  const prompt = $('#s-prompt');
+  prompt.value = mistral.customInstructions();
+  $('#s-prompt-save').onclick = () => {
+    mistral.saveCustomInstructions(prompt.value);
+    $('#s-prompt-status').textContent = 'Saved. The next recording and tidy uses these instructions.';
+  };
   saveRoute();
 }
 

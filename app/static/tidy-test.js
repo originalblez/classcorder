@@ -7,6 +7,9 @@ const $ = sel => document.querySelector(sel);
 
 let apiKey = await loadKey();
 if (!apiKey) $('#key-card').hidden = false;
+$('#custom').textContent = mistral.customInstructions()
+  ? `Your extra tidy instructions (from Settings): ${mistral.customInstructions()}`
+  : 'No extra tidy instructions are set. Add them in the app under Settings.';
 
 $('#key-save').onclick = async () => {
   const value = $('#key-input').value.trim();
