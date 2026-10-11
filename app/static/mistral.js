@@ -11,7 +11,7 @@ const PRICE_TRANSCRIBE_PER_MINUTE = 0.003;
 const PRICE_POLISH_INPUT_PER_M = 0.15;
 const PRICE_POLISH_OUTPUT_PER_M = 0.6;
 
-const POLISH_PROMPT = `Tidy this up so it is child-friendly (high school in the UK) but also more structured, free of any grammatical errors or misspellings. Remove any em dashes or obvious AI writing tics such as "it's not x, it's y". No idioms a teacher wouldn't use.`;
+const POLISH_PROMPT = `Tidy this up so it is child-friendly (high school in the UK) but also more structured, free of any grammatical errors or misspellings. Remove any em dashes or obvious AI writing tics such as "it's not x, it's y". No idioms a teacher wouldn't use. Reply with the tidied note only.`;
 
 // Transcripts shorter than this are kept as they are; there is nothing to tidy.
 const MIN_WORDS_TO_POLISH = 6;
