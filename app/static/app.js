@@ -58,8 +58,12 @@ function showFolderForm(needsPermission) {
   $('#main').replaceChildren($('#folder-view').content.cloneNode(true));
   $('#folder-hint').hidden = !needsPermission;
   $('#folder-button').textContent = needsPermission ? 'Allow access' : 'Choose folder';
-  $('#folder-button').onclick = async () => {
+  $('#folder-button').onclick = async e => {
+    const button = e.currentTarget;
     const status = $('#folder-status');
+    // A second click while the picker is already open is rejected instantly by the
+    // browser, so the button stays disabled until the picker is dealt with.
+    button.disabled = true;
     status.className = 'status';
     status.textContent = needsPermission ? 'Waiting for permission…' : 'Opening folder picker…';
     try {
@@ -75,6 +79,8 @@ function showFolderForm(needsPermission) {
         status.className = 'status error';
         status.textContent = `${err.name}: ${err.message}`;
       }
+    } finally {
+      button.disabled = false;
     }
   };
 }
