@@ -66,11 +66,11 @@ function showFolderForm(needsPermission) {
       await (needsPermission ? store.reconnectFolder() : store.chooseFolder());
       folderReady();
     } catch (err) {
-      console.error('Folder selection failed', err);
       if (err.name === 'AbortError') {
         status.className = 'status';
         status.textContent = 'No folder chosen.';
       } else {
+        console.error('Folder selection failed', err);
         status.className = 'status error';
         status.textContent = `${err.name}: ${err.message}`;
       }
