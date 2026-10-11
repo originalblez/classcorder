@@ -86,7 +86,9 @@ export async function reconnectFolder() {
 
 // Must be called from a click.
 export async function chooseFolder() {
-  const handle = await window.showDirectoryPicker({ id: 'teacher-notes', mode: 'readwrite', startIn: 'documents' });
+  // No startIn: on macOS the picker aborts instantly when the Documents folder is
+  // unavailable (typically when it is synced into iCloud Drive).
+  const handle = await window.showDirectoryPicker({ id: 'teacher-notes', mode: 'readwrite' });
   await useFolder(handle);
   await setting('folder', handle);
 }
