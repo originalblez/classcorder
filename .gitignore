@@ -9,3 +9,6 @@ wheels/
 # Virtual environments
 .venv
 .playwright-mcp/
+
+# Local notes and agent settings
+.myai/

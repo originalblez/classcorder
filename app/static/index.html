@@ -20,7 +20,7 @@
       <span class="wordmark" aria-hidden="true">Classc<span class="rec-o"></span>rder</span>
       <span class="sr-only">Classcorder</span>
     </div>
-    <button class="side-link" id="nav-reports" hidden><span class="ico i-table"></span> Reports</button>
+    <button class="side-link" id="nav-feedback" hidden><span class="ico i-note"></span> Feedback sheets</button>
     <div class="find" id="find-box" hidden>
       <span class="ico i-search"></span>
       <input type="search" id="find" placeholder="Find pupil" autocomplete="off" spellcheck="false"
@@ -58,9 +58,9 @@
         <p>Notes are saved in a folder on your own computer. There are no servers and nothing is stored online. Copy it, sync it, back it up.</p>
       </div>
       <div class="intro-feature">
-        <span class="ico i-table"></span>
-        <h3>Reports your way</h3>
-        <p>Print or export notes for any class and period, as a table, a grid or a page per pupil.</p>
+        <span class="ico i-note"></span>
+        <h3>Feedback sheets</h3>
+        <p>Turn a class's notes into printed feedback for each pupil, as a detailed page or short tiles to cut out.</p>
       </div>
     </div>
     <p class="intro-lead">To start, pick a folder for your notes. Any folder will do. A synced one, like OneDrive, Dropbox or Google Drive, keeps a backup for you.</p>
@@ -123,82 +123,90 @@
   </form>
 </template>
 
-<template id="reports-view">
+<template id="feedback-view">
   <header class="page-head">
     <div>
-      <p class="eyebrow" id="r-year"></p>
-      <h2>Reports</h2>
+      <p class="eyebrow" id="f-year"></p>
+      <h2>Feedback sheets</h2>
     </div>
   </header>
-  <section class="report-controls" id="r-controls">
-    <div class="controls-bar">
-      <button type="button" class="nav-arrow" id="r-bar-prev" aria-label="Previous">&lsaquo;</button>
-      <span class="bar-summary" id="r-summary"></span>
-      <button type="button" class="nav-arrow" id="r-bar-next" aria-label="Next">&rsaquo;</button>
-      <span class="spacer"></span>
-      <button type="button" class="btn small light" id="r-bar-print">Print</button>
-      <button type="button" class="btn small dark" id="r-toggle"></button>
+  <section class="wizard" id="f-wizard">
+    <ol class="stepper" id="f-stepper"></ol>
+
+    <div class="step" data-step="1">
+      <h3>Which class?</h3>
+      <div class="choices" id="f-classes"></div>
     </div>
-    <div class="controls-full">
-     <div class="controls-inner">
-    <div class="control-row">
-      <label class="control"><span>Class</span><select id="r-class"></select></label>
-      <div class="control"><span>Period</span><div class="segmented" id="r-period"></div></div>
+
+    <div class="step" data-step="2">
+      <h3>Which notes?</h3>
+      <p class="step-sub">Feedback is written from the notes made on one day.</p>
+      <div class="choices" id="f-periods"></div>
     </div>
-    <div class="control-row">
-      <div class="control" id="r-date-control"><span id="r-date-label">Date</span>
-        <div class="date-nav">
-          <button type="button" class="nav-arrow" id="r-prev" aria-label="Previous">&lsaquo;</button>
-          <input type="date" id="r-date">
-          <button type="button" class="nav-arrow" id="r-next" aria-label="Next">&rsaquo;</button>
-          <button type="button" class="btn small dark" id="r-today">Today</button>
-        </div>
+
+    <div class="step" data-step="3">
+      <h3>Which layout?</h3>
+      <div class="choices layouts" id="f-layouts"></div>
+    </div>
+
+    <div class="step" data-step="4">
+      <h3>Set up the sheets</h3>
+      <div class="option-groups">
+        <fieldset class="option-group">
+          <legend>On each sheet</legend>
+          <label class="field-dark">Heading
+            <input id="f-heading" placeholder="For example 7EF Dance feedback" autocomplete="off">
+          </label>
+          <label class="field-dark">Date
+            <input type="date" id="f-date">
+          </label>
+          <label class="check-dark"><input type="checkbox" id="f-showName"> Pupil name</label>
+          <div class="check-dark">
+            <label><input type="checkbox" id="f-showScore"> Score</label>
+            <label class="score-out-label" id="f-score-out-label">out of <input type="number" id="f-score-out" min="1" max="1000" inputmode="numeric"></label>
+          </div>
+          <label class="check-dark"><input type="checkbox" id="f-showFooter"> Your name and the date</label>
+          <p class="option-note" id="f-teacher-note"></p>
+        </fieldset>
+        <fieldset class="option-group">
+          <legend>Who gets a sheet</legend>
+          <label class="check-dark"><input type="checkbox" id="f-empty"> Pupils with no notes, to fill in by hand</label>
+          <label class="check-dark"><input type="checkbox" id="f-copies"> A copy for each member of a group</label>
+        </fieldset>
       </div>
-      <label class="control" id="r-to-control"><span>To</span><input type="date" id="r-to"></label>
+      <section class="option-group sheet-list">
+        <h4 class="legend">Sheets</h4>
+        <p class="option-note">Untick a sheet to leave it out. Pupils who share the same notes start out in a group, which gets one sheet; move pupils between groups with the menus.</p>
+        <div id="f-sheets"></div>
+      </section>
     </div>
-    <div class="control-row">
-      <div class="control"><span>Layout</span><div class="segmented" id="r-layout"></div></div>
-      <div class="control"><span>Include</span>
-        <div class="toggles">
-          <label><input type="checkbox" id="r-empty"> Pupils with no notes</label>
-          <label id="r-breaks-row"><input type="checkbox" id="r-breaks"> New page per pupil</label>
-        </div>
-      </div>
-    </div>
-    <div class="control-row actions-row">
-      <label class="control inline"><span>Preset</span><select id="r-preset"></select></label>
-      <button type="button" class="btn small dark" id="r-save-preset">Save as preset</button>
-      <button type="button" class="btn small dark" id="r-delete-preset">Delete preset</button>
+
+    <footer class="wizard-foot">
+      <button type="button" class="btn dark" id="f-back">Back</button>
+      <p class="status" id="f-status"></p>
       <span class="spacer"></span>
-      <button type="button" class="btn dark" id="r-copy">Copy for Excel or Word</button>
-      <button type="button" class="btn dark" id="r-csv">Save CSV</button>
-      <button type="button" class="btn light" id="r-print">Print</button>
-    </div>
-     </div>
-    </div>
-    <p class="status" id="r-status"></p>
+      <button type="button" class="btn light" id="f-next">Next</button>
+      <button type="button" class="btn light" id="f-generate">Generate sheets</button>
+    </footer>
   </section>
-  <article class="report-paper" id="r-paper"></article>
+  <section class="card f-saved" id="f-saved" hidden>
+    <h3>Saved sheets</h3>
+    <p class="sub" id="f-saved-sub"></p>
+    <ul id="f-saved-list"></ul>
+  </section>
 </template>
 
-<template id="preset-modal">
-  <form class="modal-form">
-    <header>
-      <h2 id="modal-title">Save preset</h2>
-      <p class="sub">Saves the class, period, layout and include options, but not the dates. Saving with an existing name replaces that preset.</p>
-    </header>
-    <div class="modal-body">
-      <label class="field">Preset name
-        <input id="p-name" placeholder="For example 7A weekly grid" autocomplete="off">
-      </label>
-      <p class="status error" id="p-error"></p>
+<template id="report-view">
+  <header class="page-head report-head">
+    <div>
+      <button type="button" class="link-button back-link" id="r-back">&lsaquo; Feedback sheets</button>
+      <h2 id="r-title"></h2>
+      <p class="eyebrow" id="r-sub"></p>
     </div>
-    <footer>
-      <span class="spacer"></span>
-      <button type="button" class="btn" data-close>Cancel</button>
-      <button class="btn primary">Save preset</button>
-    </footer>
-  </form>
+    <button type="button" class="btn primary" id="r-print">Print</button>
+  </header>
+  <p class="report-status" id="r-status"></p>
+  <article id="r-paper"></article>
 </template>
 
 <template id="confirm-modal">
@@ -236,6 +244,16 @@
         <p id="s-export-text"></p>
       </div>
       <button class="btn" id="s-export-all">Export all (Excel)</button>
+    </div>
+    <div class="setting column">
+      <div>
+        <h3>Your name</h3>
+        <p>Shown with the date on feedback sheets. Saved on this computer only.</p>
+      </div>
+      <div class="row">
+        <input id="s-teacher" class="text-input" placeholder="For example Miss Blezard" autocomplete="off">
+        <span class="status" id="s-teacher-status"></span>
+      </div>
     </div>
     <div class="setting">
       <div>
@@ -306,10 +324,10 @@
       <span class="timer" id="timer">0:00</span>
     </div>
     <div class="composer-body">
-      <textarea id="draft" placeholder="Press Record and speak, or type a note here. Recordings are tidied automatically. Select any text and press Tidy to tidy just that part."></textarea>
+      <textarea id="draft" placeholder="Press Record and speak, or type a note here. Recordings are tidied automatically. Press Tidy to tidy the note, or select some text to tidy just that part."></textarea>
       <div class="composer-foot">
         <p class="status" id="status">Press Record and speak your note.</p>
-        <button class="btn" id="tidy" hidden>Tidy</button>
+        <button class="btn" id="tidy" disabled>Tidy</button>
         <button class="btn" id="discard" disabled>Discard</button>
         <button class="btn primary" id="save" disabled>Save note</button>
       </div>
@@ -340,7 +358,7 @@
       <textarea id="draft" placeholder="Press Record and speak, or type a note here. The note is saved against every pupil you choose in the roster."></textarea>
       <div class="composer-foot">
         <p class="status" id="status">Choose pupils in the roster, then record or type.</p>
-        <button class="btn" id="tidy" hidden>Tidy</button>
+        <button class="btn" id="tidy" disabled>Tidy</button>
         <button class="btn" id="discard" disabled>Discard</button>
         <button class="btn primary" id="save" disabled>Save note</button>
       </div>

@@ -2,11 +2,14 @@
 //   Teacher Notes/Data/2026-27.json   one file per school year (September to August),
 //                                     holding that year's classes, pupils and notes
 //   Teacher Notes/Exports/            readable exports
+//   Teacher Notes/Feedback/           generated feedback sheets: a printable .html and a
+//                                     .json the app reopens, per set
 // The OneDrive desktop app syncs the folder. Uses the File System Access API (Chrome/Edge).
 // The browser only remembers which folder was chosen (in IndexedDB).
 
 const DATA_DIR = 'Data';
 const EXPORTS_DIR = 'Exports';
+const REPORTS_DIR = 'Feedback';
 const YEAR_FILE = /^(\d{4}-\d{2})\.json$/;
 const SETTINGS_DB = 'pupil-notes-settings';
 
@@ -16,6 +19,8 @@ let test = false;
 let year = null;  // the school year being viewed, e.g. "2026-27"
 
 export const supported = () => 'showDirectoryPicker' in window;
+// Test mode needs only the browser's private storage, which Safari also has.
+export const testSupported = () => !!navigator.storage?.getDirectory;
 
 // --- School years ---
 export function schoolYearFor(date = new Date()) {
@@ -117,6 +122,7 @@ export async function useTestFolder() {
 
 const dataDir = () => root.getDirectoryHandle(DATA_DIR, { create: true });
 const exportsDir = () => root.getDirectoryHandle(EXPORTS_DIR, { create: true });
+const reportsDir = () => root.getDirectoryHandle(REPORTS_DIR, { create: true });
 
 // --- Reading and writing a year's data file ---
 async function read(y = year) {
@@ -271,8 +277,8 @@ export const deleteNote = id =>
     data.notes = data.notes.filter(n => n.id !== id);
   });
 
-// Classes, pupils and the notes written from `from` up to (not including) `to`, for reports.
-export async function reportData(from, to) {
+// Classes, pupils and the notes written from `from` up to (not including) `to`, for feedback sheets.
+export async function notesBetween(from, to) {
   const data = await read();
   const notes = data.notes
     .filter(n => { const t = new Date(n.created_at); return t >= from && t < to; })
@@ -281,6 +287,49 @@ export async function reportData(from, to) {
 }
 
 export const yearCost = async () => (year ? (await read()).notes.reduce((sum, n) => sum + (n.cost_usd ?? 0), 0) : 0);
+
+// --- Feedback sheets ---
+// A set is saved as <name>.json (read back by the app) and <name>.html (opens and
+// prints on its own). report.file is the shared name, without an extension.
+async function writeText(dir, filename, content) {
+  const w = await (await dir.getFileHandle(filename, { create: true })).createWritable();
+  await w.write(content);
+  await w.close();
+}
+
+export async function saveReport(report, html) {
+  const dir = await reportsDir();
+  await writeText(dir, `${report.file}.json`, JSON.stringify(report, null, 2));
+  await writeText(dir, `${report.file}.html`, html);
+  return `${REPORTS_DIR}/${report.file}.html`;
+}
+
+export async function readReport(file) {
+  const handle = await (await reportsDir()).getFileHandle(`${file}.json`);
+  const report = JSON.parse(await (await handle.getFile()).text());
+  if (report?.app !== 'classcorder-feedback') throw new Error(`${file}.json is not a Classcorder feedback file.`);
+  return report;
+}
+
+// The selected year's saved sets, newest first.
+export async function listReports() {
+  const list = [];
+  for await (const [name, handle] of (await reportsDir()).entries()) {
+    if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+    try {
+      const r = JSON.parse(await (await handle.getFile()).text());
+      if (r?.app === 'classcorder-feedback' && r.school_year === year) list.push(r);
+    } catch {}
+  }
+  return list.sort(newest);
+}
+
+export async function deleteReport(file) {
+  const dir = await reportsDir();
+  for (const ext of ['json', 'html']) await dir.removeEntry(`${file}.${ext}`).catch(() => {});
+}
+
+export const reportsFolder = () => REPORTS_DIR;
 
 // --- Exports ---
 const today = () => new Date().toISOString().slice(0, 10);

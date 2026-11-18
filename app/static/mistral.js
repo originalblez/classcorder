@@ -129,6 +129,60 @@ export async function polish(key, transcript) {
   return { text, cost, added };
 }
 
+// --- Feedback sheets ---
+// Fills a template's sections from a pupil's (or a group's) notes. Pupil names are never
+// sent: the sheet shows the name itself, and the notes are addressed to "you".
+// sections: [{ heading, guide, numbered }]. notes: [{ text, created_at }].
+// Returns { sections: { [heading]: text }, cost }.
+export async function writeFeedback(key, sections, notes, { group = false } = {}) {
+  const extra = customInstructions();
+  const system = `You turn a UK secondary school teacher's notes into written feedback for ${group ? 'a group of pupils' : 'a pupil'}.
+Write to ${group ? 'the group as "you" (meaning all of you)' : 'the pupil as "you"'}, in the teacher's warm, plain classroom voice, with British spelling.
+Use only what the notes say. Do not invent observations, marks or events. A next step may turn what the notes say into a concrete action.
+Never use names; the sheet shows the name.
+If the notes give nothing for a section, use an empty string for it.
+Plain text only: no headings, no markdown, no em dashes. Keep it short enough to fit the sheet.
+Reply with a JSON object with exactly these keys, each a string:
+${sections.map(s => `- ${JSON.stringify(s.heading)}: ${s.guide || 'as the heading says'}${s.numbered ? ' Numbered points, one per line, each written as "1. Short label: text".' : ''}`).join('\n')}${extra
+    ? `\n\nThe teacher's own additional instructions, which must also be followed:\n${extra}` : ''}`;
+  const body = notes.map(n => `<note date="${n.created_at.slice(0, 10)}">\n${n.text}\n</note>`).join('\n');
+  const out = await call('/chat/completions', key, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: POLISH_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'system', content: system }, { role: 'user', content: body }],
+    }),
+  });
+  const usage = out.usage ?? {};
+  const cost = ((usage.prompt_tokens ?? 0) * PRICE_POLISH_INPUT_PER_M + (usage.completion_tokens ?? 0) * PRICE_POLISH_OUTPUT_PER_M) / 1e6;
+  let parsed;
+  try { parsed = JSON.parse(out.choices[0].message.content); } catch { throw new Error('Mistral replied in an unexpected format. Try again.'); }
+  const result = {};
+  for (const s of sections) {
+    const value = parsed?.[s.heading];
+    result[s.heading] = typeof value === 'string' ? cleanFeedback(value, s.numbered) : Array.isArray(value) ? cleanFeedback(value.join('\n'), s.numbered) : '';
+  }
+  return { sections: result, cost };
+}
+
+// Strips markdown and em dashes; numbered sections keep their "1." line starts.
+function cleanFeedback(text, numbered) {
+  let t = text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*\n]+)\*/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*+•]\s+/gm, '')
+    .replace(/\s*[–—]\s*/g, ', ')
+    .replace(/,\s*,/g, ',')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  if (!numbered) t = t.replace(/^\s*\d+\.\s+/gm, '');
+  return t;
+}
+
 // Rough conversion for display only; Mistral bills in USD.
 const GBP_PER_USD = 0.75;
 

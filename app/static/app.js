@@ -1,5 +1,5 @@
 import { $, el, plural, openModal, confirmModal, notice } from './dom.js';
-import * as reports from './reports.js';
+import * as feedback from './feedback.js';
 import * as store from './store.js';
 import * as mistral from './mistral.js';
 import { loadKey, saveKey, forgetKey } from './key.js';
@@ -7,12 +7,12 @@ import { loadKey, saveKey, forgetKey } from './key.js';
 
 let apiKey = null;
 let current = null;      // selected pupil
-let view = null;         // 'reports' or 'settings' while that screen is open
+let view = null;         // 'feedback' or 'settings' while that screen is open
 let yearCollapsed = false;
 let recorder = null, busy = false;
 // The note being drafted: the estimated cost of tidying it, if AI was used.
 let draftCost = 0;
-// The draft's current selection as [start, end], or null; drives the Tidy button.
+// The draft's current selection as [start, end], or null; Tidy acts on it if set.
 let draftSel = null;
 
 const recording = () => busy || recorder?.state === 'recording';
@@ -90,12 +90,11 @@ async function exitGroupMode() {
   else await showEmpty();
 }
 
-// The Tidy button appears only while part of the draft is selected.
+// Remembers the draft's selection, so Tidy can act on just that part.
 function syncDraftSelection() {
   const draft = $('#draft');
   draftSel = draft.selectionStart !== draft.selectionEnd
     ? [draft.selectionStart, draft.selectionEnd] : null;
-  $('#tidy').hidden = !draftSel;
 }
 
 // The composer is the same markup in the pupil and group views; this wires it up.
@@ -281,12 +280,10 @@ function saveRoute() {
   const params = new URLSearchParams();
   if (store.selectedYear()) params.set('year', store.selectedYear());
   if (current) params.set('pupil', current.id);
-  if (view === 'reports') {
-    params.set('view', 'reports');
-    for (const [k, v] of reports.routeParams()) params.set(k, v);
-  }
-  if (view === 'settings') params.set('view', 'settings');
-  $('#nav-reports').classList.toggle('active', view === 'reports');
+  if (view === 'settings' || view === 'feedback') params.set('view', view);
+  // A saved set of feedback sheets: its file name in the Feedback folder.
+  if (view === 'feedback' && feedback.openReportFile()) params.set('report', feedback.openReportFile());
+  $('#nav-feedback').classList.toggle('active', view === 'feedback');
   $('#nav-settings').classList.toggle('active', view === 'settings');
   const base = location.pathname + location.search;
   history.replaceState(null, '', params.size ? `${base}#${params}` : base);
@@ -297,9 +294,8 @@ async function restoreRoute() {
   const params = new URLSearchParams(location.hash.slice(1));
   const year = params.get('year');
   if (year && (await store.listYears()).includes(year)) await store.selectYear(year);
-  if (params.get('view') === 'reports' && store.selectedYear()) {
-    reports.restoreRoute(params);
-    showReports();
+  if (params.get('view') === 'feedback' && store.selectedYear()) {
+    showFeedback(params.get('report'));
     return true;
   }
   if (params.get('view') === 'settings') {
@@ -340,7 +336,7 @@ let tree = [];  // the selected year's classes with their pupils, for the sideba
 async function refreshSidebar() {
   const nav = $('#tree');
   $('#add-class').hidden = true;
-  $('#nav-reports').hidden = true;
+  $('#nav-feedback').hidden = true;
   $('#find-box').hidden = true;
   $('#nav-settings').hidden = !store.folderName();
   if (!store.folderName() || !apiKey) { tree = []; nav.replaceChildren(); return; }
@@ -367,7 +363,7 @@ async function refreshSidebar() {
       ul.append(li);
     }
     nav.replaceChildren(ul);
-    $('#nav-reports').hidden = !selected;
+    $('#nav-feedback').hidden = !selected;
     $('#find-box').hidden = !tree.some(c => c.pupils.length);
     // Classes can only be added to the current year.
     $('#add-class').hidden = !store.isCurrentYear();
@@ -409,7 +405,7 @@ async function chooseYear(y) {
   if (!(await okToLeaveDraft())) return;
   await store.selectYear(y);
   yearCollapsed = false;
-  if (view === 'reports') showReports();
+  if (view === 'feedback') showFeedback();
   else if (view === 'settings') showSettings();
   else await showEmpty();
   refreshSidebar();
@@ -492,20 +488,20 @@ document.addEventListener('keydown', e => {
   find.focus();
 });
 
-// --- Reports ---
-function showReports() {
+// --- Feedback sheets ---
+function showFeedback(reportFile = null) {
   if (!store.selectedYear()) return;
   current = null;
-  view = 'reports';
+  view = 'feedback';
   closeRoster();
   markActive();
-  reports.show($('#main'), saveRoute);
+  feedback.show($('#main'), () => apiKey, saveRoute, reportFile);
   saveRoute();
 }
 
-$('#nav-reports').onclick = async () => {
-  if (view === 'reports' || !(await okToLeaveDraft())) return;
-  showReports();
+$('#nav-feedback').onclick = async () => {
+  if ((view === 'feedback' && !feedback.openReportFile()) || !(await okToLeaveDraft())) return;
+  showFeedback();
 };
 
 // --- Settings ---
@@ -528,6 +524,12 @@ function showSettings() {
   const key = $('#s-key');
   key.textContent = apiKey ? 'Forget API key' : 'Connect';
   key.onclick = apiKey ? forgetApiKey : showKeyForm;
+  const teacher = $('#s-teacher');
+  teacher.value = feedback.teacherName();
+  teacher.oninput = () => {
+    feedback.saveTeacherName(teacher.value);
+    $('#s-teacher-status').textContent = 'Saved';
+  };
   const prompt = $('#s-prompt');
   prompt.value = mistral.customInstructions();
   $('#s-prompt-save').onclick = () => {
@@ -663,11 +665,11 @@ function updateButtons() {
   $('#rec').disabled = busy;
   $('#save').disabled = busy || !has || (groupMode && !groupMode.selected.size);
   $('#discard').disabled = busy || !has;
+  if ($('#tidy')) $('#tidy').disabled = busy || !has;
 }
 function resetDraft() {
   draftCost = 0;
   draftSel = null;
-  if ($('#tidy')) $('#tidy').hidden = true;
   $('#draft').value = '';
   updateButtons();
 }
@@ -718,7 +720,7 @@ async function selectPupil(p) {
   $('#discard').onclick = resetDraft;
   $('#tidy').onclick = tidyDraft;
   $('#draft').oninput = updateButtons;
-  // The Tidy button appears only while part of the draft is selected.
+  // Remember the selection so Tidy can act on just that part.
   const draftEl = $('#draft');
   draftEl.addEventListener('select', syncDraftSelection);
   draftEl.addEventListener('keyup', syncDraftSelection);
@@ -990,18 +992,20 @@ async function processRecording(blob, seconds) {
   }
 }
 
-// Tidies a typed note through the same step as a recording.
-// Tidies the selected part of the draft, splicing the tidied text back in place.
-// The Tidy button is only shown while text is selected.
+// Tidies the selected part of the draft, or the whole draft if nothing is
+// selected, splicing the tidied text back in place.
 async function tidyDraft() {
   const draft = $('#draft');
   const sel = draft.selectionStart !== draft.selectionEnd
     ? [draft.selectionStart, draft.selectionEnd] : draftSel;
-  if (!sel || busy) return;
-  const [start, end] = sel;
+  if (busy) return;
+  const whole = !sel;
+  const [start, end] = sel || [0, draft.value.length];
+  const what = whole ? 'note' : 'selected text';
   const transcript = draft.value.slice(start, end).trim();
   if (!transcript) return;
   busy = true;
+  updateButtons();
   setStatus('Tidying…');
   try {
     const polished = await mistral.polish(apiKey, transcript);
@@ -1012,10 +1016,10 @@ async function tidyDraft() {
     draft.setSelectionRange(caret, caret);
     const costText = `est. cost ${mistral.formatCost(polished.cost)}`;
     setStatus(polished.rejected
-      ? `Couldn't tidy this reliably, so the selected text is unchanged · ${costText}`
+      ? `Couldn't tidy this reliably, so the ${what} is unchanged · ${costText}`
       : polished.skipped
-        ? `Too short to tidy, so the selected text is unchanged · ${costText}`
-        : `Tidied the selected text · ${costText}`);
+        ? `Too short to tidy, so the ${what} is unchanged · ${costText}`
+        : `Tidied the ${what} · ${costText}`);
   } catch (err) {
     if (err instanceof mistral.ApiKeyError) {
       forgetKey();
@@ -1028,7 +1032,6 @@ async function tidyDraft() {
   } finally {
     busy = false;
     draftSel = null;
-    if ($('#tidy')) $('#tidy').hidden = true;
     if ($('#rec')) updateButtons();
   }
 }
@@ -1077,12 +1080,22 @@ async function exportAll() {
 }
 
 // --- Start ---
-if (!store.supported()) {
+// ?test runs the app on the browser's own private storage, so it can be used where
+// the folder picker cannot open (automated browsers intercept it, Safari lacks it).
+const test = new URLSearchParams(location.search).has('test');
+if (test ? !store.testSupported() : !store.supported()) {
   $('#main').replaceChildren($('#unsupported-view').content.cloneNode(true));
 } else {
-  // ?test runs the app on the browser's own private storage, so it can be used where
-  // the folder picker cannot open (automated browsers intercept it).
-  const test = new URLSearchParams(location.search).has('test');
+  // ?test&seed replaces the test data with made-up classes and notes, then drops
+  // "seed" from the address so a refresh keeps any changes.
+  const params = new URLSearchParams(location.search);
+  if (test && params.has('seed')) {
+    try {
+      await (await import('./dev-seed.js')).seed();
+    } catch (err) { console.error('Could not add the dummy data', err); }
+    params.delete('seed');
+    history.replaceState(null, '', `${location.pathname}?${params}`.replace(/=(&|$)/g, '$1') + location.hash);
+  }
   const state = test
     ? await store.useTestFolder().then(() => 'connected').catch(() => 'not-chosen')
     : await store.restoreFolder().catch(() => 'not-chosen');
